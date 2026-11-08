@@ -49,9 +49,15 @@ header .sub { color: var(--muted); font-size: 13px; }
 .chip { margin-left: auto; font-size: 12px; padding: 4px 10px; border-radius: 99px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
 .chip.on { background: var(--das-soft); color: var(--das); }
 main { max-width: 760px; margin: 0 auto; padding: 8px 16px 24px; }
+/* phone: one row that scrolls sideways when the tabs don't fit (7+ tabs at 375px); the page itself never scrolls sideways */
 nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line);
-  display: flex; justify-content: center; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); z-index: 5; }
-nav.tabs button { flex: 1; max-width: 140px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 12px;
+  display: flex; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); z-index: 5;
+  overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scroll-padding: 0 4px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+nav.tabs::-webkit-scrollbar { display: none; }
+nav.tabs.more-r { -webkit-mask-image: linear-gradient(to right, #000 85%, transparent); mask-image: linear-gradient(to right, #000 85%, transparent); }
+nav.tabs.more-l { -webkit-mask-image: linear-gradient(to left, #000 85%, transparent); mask-image: linear-gradient(to left, #000 85%, transparent); }
+nav.tabs.more-l.more-r { -webkit-mask-image: linear-gradient(to right, transparent, #000 15%, #000 85%, transparent); mask-image: linear-gradient(to right, transparent, #000 15%, #000 85%, transparent); }
+nav.tabs button { flex: 1 0 60px; max-width: 140px; scroll-snap-align: start; border: 0; background: none; color: var(--muted); font: inherit; font-size: 12px; white-space: nowrap;
   padding: 6px 2px; border-radius: 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 nav.tabs button .ico { font-size: 18px; line-height: 1; font-weight: 700; }
 nav.tabs button.on { color: var(--fg); background: var(--surface-2); }
@@ -59,7 +65,8 @@ body.in-lesson nav.tabs { display: none; }
 body.in-lesson { padding-bottom: 24px; }
 @media (min-width: 760px) {
   body { padding-bottom: 24px; }
-  nav.tabs { position: static; max-width: 760px; margin: 4px auto 0; border: 0; background: none; gap: 6px; padding: 0 16px; }
+  nav.tabs { position: static; max-width: 760px; margin: 4px auto 0; border: 0; background: none; gap: 6px; padding: 0 16px; overflow: visible; flex-wrap: wrap;
+    -webkit-mask-image: none !important; mask-image: none !important; }
   nav.tabs button { flex-direction: row; justify-content: center; font-size: 14px; padding: 8px 12px; background: var(--surface); box-shadow: var(--shadow); max-width: none; }
 }
 .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; margin: 14px 0; }
@@ -181,7 +188,7 @@ details.grp summary { cursor: pointer; font-weight: 600; }
 <div class="tip" id="tip" hidden></div>
 
 <script>
-const APP_VERSION = 'v10';
+const APP_VERSION = 'v11';
 const TABS = [
   { id: 'artikel', ico: 'der', name: 'Artikel', title: 'Genul substantivelor',
     desc: 'Exersezi <span class="art der">der</span> / <span class="art die">die</span> / <span class="art das">das</span> pe cuvintele tale din Duolingo, cu regulile de terminație (-ung, -chen, -keit…).' },
@@ -193,10 +200,14 @@ const TABS = [
     desc: 'Präsens (cu e→i, a→ä și verbe separabile), Perfekt (participiul și haben/sein), Präteritum, Futur cu <i>werden</i>, Imperativ și, de B1, Konjunktiv II (<i>würde</i>, <i>wäre</i>, <i>hätte</i>, <i>hätte gemacht</i>), Plusquamperfekt, Perfektul modalelor (<i>habe arbeiten müssen</i>) și pasivul (<i>wird gemacht</i>, <i>ist gemacht worden</i>), pe verbele tale din Duolingo.' },
   { id: 'kasus', ico: 'Dat', name: 'Kasus', title: 'Cazuri și prepoziții',
     desc: 'Articolul corect după prepoziție și Wechselpräpositionen: unde? (dativ) sau încotro? (acuzativ).' },
+  { id: 'pronomen', ico: 'mir', name: 'Pronomen', title: 'Pronumele',
+    desc: 'Pronume personale la acuzativ și dativ (<i>ihn/ihm</i>, <i>sie/ihr</i>, <i>ihnen/Ihnen</i>), reflexive (<i>ich freue mich</i>, <i>ich wasche mir die Hände</i>) și relative (<i>der Mann, dem ich helfe</i>; <i>denen</i>, <i>dessen</i>, <i>deren</i>).' },
   { id: 'profil', ico: '⚙', name: 'Profil', title: 'Profil și conexiune', desc: '' }
 ];
 const LESSON_TABS = TABS.filter(t => t.id !== 'profil').map(t => t.id);
-const KIND = { articol: 'Articolul', plural: 'Pluralul', adjectiv: 'Terminația adjectivului', caz: 'Cazul după prepoziție', verb: 'Verbul', substantiv: 'Calibrare · articol și plural' };
+const PRON_FEL = { personal: 'Pronume personal', reflexiv: 'Pronume reflexiv', relativ: 'Pronume relativ' };
+const kindOf = item => (item.tip === 'pronume' && PRON_FEL[(item.verificare || {}).fel]) || KIND[item.tip] || '';
+const KIND = { articol: 'Articolul', plural: 'Pluralul', adjectiv: 'Terminația adjectivului', caz: 'Cazul după prepoziție', verb: 'Verbul', pronume: 'Pronumele', substantiv: 'Calibrare · articol și plural' };
 
 /* ---------- storage + GitHub (same pattern as Summit Building) ---------- */
 const store = {
@@ -597,9 +608,9 @@ function viewRun() {
   let h = `<div class="ltop"><button class="btn ghost" data-act="quit" title="Ieși din lecție">✕</button><div class="bar"><i style="width:${pct}%"></i></div>
     <span class="small muted">${r.pos + 1}/${total}</span></div>
   <section class="card item">
-    <div class="kind">${esc(KIND[item.tip] || '')}${r.retried.includes(r.pos) ? ' · din nou' : ''}</div>
+    <div class="kind">${esc(kindOf(item))}${r.retried.includes(r.pos) ? ' · din nou' : ''}</div>
     <p class="sent">${sentenceHTML(item, st)} <button class="ro-btn" data-act="ro" title="Traducerea propoziției">RO</button></p>
-    ${item.indiciu ? `<div class="hint">${item.tip === 'adjectiv' ? 'Adjectivul' : item.tip === 'verb' ? 'Verbul' : 'Indiciu'}: <b>${esc(item.indiciu)}</b></div>` : ''}
+    ${item.indiciu ? `<div class="hint">${item.tip === 'adjectiv' ? 'Adjectivul' : item.tip === 'verb' ? 'Verbul' : item.tip === 'pronume' ? 'Pronumele' : 'Indiciu'}: <b>${esc(item.indiciu)}</b></div>` : ''}
     <p class="ro-line" id="ro-line" ${r.roSeen || st ? '' : 'hidden'}>${esc(item.traducere)}</p>`;
   if (!st) {
     h += `<form class="answer" data-act="check" autocomplete="off"><input id="ans" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="Răspunsul tău"><button class="btn primary">Verifică</button></form>
@@ -708,8 +719,15 @@ function render() {
   document.getElementById('conn').textContent = S.syncing ? 'sincronizez…' : S.connected ? 'conectat' : (GH.token ? 'offline' : 'neconectat');
   document.getElementById('conn').classList.toggle('on', S.connected);
   document.body.classList.toggle('in-lesson', !!S.run);
-  document.getElementById('tabs').innerHTML = TABS.map(t =>
+  const nav = document.getElementById('tabs');
+  nav.innerHTML = TABS.map(t =>
     `<button data-tab="${t.id}" class="${S.tab === t.id ? 'on' : ''}"><span class="ico">${esc(t.ico)}</span>${esc(t.name)}</button>`).join('');
+  const on = nav.querySelector('.on');  // keep the current tab visible when the bar scrolls (phone)
+  if (on && nav.scrollWidth > nav.clientWidth) {
+    if (on.offsetLeft < nav.scrollLeft) nav.scrollLeft = on.offsetLeft - 4;
+    else if (on.offsetLeft + on.offsetWidth > nav.scrollLeft + nav.clientWidth) nav.scrollLeft = on.offsetLeft + on.offsetWidth - nav.clientWidth + 4;
+  }
+  tabFade();
   const t = TABS.find(x => x.id === S.tab) || TABS[0];
   document.getElementById('view').innerHTML = S.run ? viewRun() : t.id === 'profil' ? viewProfil() : viewLesson(t);
   if (S.run && !S.run.finished) {
@@ -717,6 +735,14 @@ function render() {
     const n = document.getElementById('next-btn'); if (n) n.focus({ preventScroll: true });
   }
 }
+
+function tabFade() {
+  const nav = document.getElementById('tabs');
+  nav.classList.toggle('more-l', nav.scrollLeft > 2);
+  nav.classList.toggle('more-r', nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 2);
+}
+document.getElementById('tabs').addEventListener('scroll', tabFade, { passive: true });
+window.addEventListener('resize', tabFade);
 
 /* ---------- word tooltips: hover on PC, tap on phone ---------- */
 const tipEl = document.getElementById('tip');
