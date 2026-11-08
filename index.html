@@ -102,7 +102,7 @@ a { color: var(--der); }
 <main id="view"></main>
 
 <script>
-const APP_VERSION = 'v1';
+const APP_VERSION = 'v2';
 const TABS = [
   { id: 'artikel', ico: 'der', name: 'Artikel', title: 'Genul substantivelor',
     desc: 'Exersezi <span class="art der">der</span> / <span class="art die">die</span> / <span class="art das">das</span> pe cuvintele tale din Duolingo, cu regulile de terminație (-ung, -chen, -keit…).' },
@@ -201,6 +201,22 @@ function insertAtCursor(input, ch) {
   input.setSelectionRange(s + ch.length, s + ch.length);
 }
 
+/* ---------- install as an app ---------- */
+let INSTALL = null;
+const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); INSTALL = e; render(); });
+window.addEventListener('appinstalled', () => { INSTALL = null; render(); });
+function installCard() {
+  if (standalone()) return '';
+  if (INSTALL) return `<section class="card"><h2>Instalează aplicația</h2>
+    <p class="muted small">O deschizi apoi din meniul Start sau de pe ecranul telefonului, într-o fereastră proprie, și merge și offline.</p>
+    <button class="btn primary" data-act="install">Instalează SmartDeutschLehrer</button></section>`;
+  return `<section class="card"><h2>Instalează aplicația</h2><p class="muted small">
+    <b>Chrome pe PC:</b> iconița de instalare din dreapta barei de adresă, sau meniul ⋮ → <i>Cast, save and share</i> → <i>Install page as app</i>.<br>
+    <b>Chrome pe Android:</b> meniul ⋮ → <i>Add to Home screen</i> → <i>Install</i>.<br>
+    <b>iPhone (Safari):</b> butonul Share → <i>Add to Home Screen</i>.</p></section>`;
+}
+
 /* ---------- views ---------- */
 function viewLesson(t) {
   const n = S.counts[t.id] ?? 0;
@@ -208,7 +224,8 @@ function viewLesson(t) {
     <div class="stat"><div><span class="muted small">Lecții pregătite</span><b>${S.connected ? n : '–'}</b></div>
       <div><span class="muted small">Durată</span><b>~5 min</b></div></div>
     <button class="btn primary" disabled>Lecție nouă</button>
-    <p class="small muted">Playerul de lecții vine în faza F2. Acum aplicația doar verifică legătura cu repo-ul de date.</p></section>`;
+    <p class="small muted">Butonul e inactiv intenționat: aplicația e în faza F0, adică doar legătura cu datele. Lecțiile apar după F1 (dicționarul de substantive) și F2 (playerul de lecții).</p></section>
+    ${INSTALL ? installCard() : ''}`;
 }
 function viewProfil() {
   let h = `<section class="card"><h2>Conexiunea cu datele</h2>
@@ -236,6 +253,7 @@ function viewProfil() {
     <p class="muted small">Sub fiecare căsuță de răspuns vei avea butoanele de mai jos. Încearcă: scrie <i>die Häuser</i>.</p>
     <label class="f">Probă<input type="text" id="try-umlaut" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
     ${umlautBar('try-umlaut')}</section>
+  ${installCard()}
   <section class="card"><h2>Aplicația</h2><p class="small muted">Versiunea ${APP_VERSION} · dispozitiv ${esc(deviceId())}</p>
     <button class="btn" data-act="update">Caută actualizări</button></section>`;
   return h;
@@ -278,6 +296,8 @@ document.addEventListener('click', async e => {
       S.msg = { text: `Scrierea merge. Commit ${esc(c.sha.slice(0, 7))} în ${esc(GH.repo)}.` };
     } catch (err) { S.msg = { bad: true, text: errText(err) }; }
     render();
+  } else if (act === 'install') {
+    if (INSTALL) { INSTALL.prompt(); await INSTALL.userChoice.catch(() => {}); INSTALL = null; render(); }
   } else if (act === 'update') {
     const reg = await navigator.serviceWorker?.getRegistration();
     if (reg) await reg.update();
