@@ -152,6 +152,22 @@ a { color: var(--der); }
 .ok-txt { color: var(--ok); } .bad-txt { color: var(--bad); }
 .fb s { color: var(--muted); }
 
+/* ---------- word order (tip ordine): tap the tiles into the sentence, tap a placed tile to take it back ---------- */
+/* room for the sentence to grow while tiles are placed, so the tiles below don't move under the finger */
+.sent.order { min-height: 3.2em; }
+@media (max-width: 759px) { .sent.order { min-height: 4.8em; } }
+.slot-empty { display: inline-block; min-width: 110px; border-bottom: 3px dashed var(--line); line-height: 1.2; }
+.tile { font: inherit; font-size: 18px; line-height: 1.25; padding: 8px 13px; min-height: 44px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface); color: var(--fg); cursor: pointer; box-shadow: 0 1px 0 var(--line); touch-action: manipulation; }
+.tile:active { transform: scale(.97); }
+.tile.placed { font-size: 21px; padding: 0 7px; min-height: 0; margin: 2px 1px; background: var(--der-soft); border-color: var(--der); box-shadow: none; vertical-align: baseline; }
+.tile.used { visibility: hidden; }
+.bank { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.order-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.built { font-weight: 600; }
+.built.ok { color: var(--ok); } .built.bad { color: var(--bad); text-decoration: line-through; }
+.ro-gl { display: block; font-style: normal; font-size: 13px; margin-top: 4px; }
+
 /* ---------- profile ---------- */
 .sub-h { font-size: 14px; margin: 18px 0 4px; color: var(--muted); font-weight: 600; }
 .settings-h { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 28px 2px 0; }
@@ -188,7 +204,7 @@ details.grp summary { cursor: pointer; font-weight: 600; }
 <div class="tip" id="tip" hidden></div>
 
 <script>
-const APP_VERSION = 'v13';
+const APP_VERSION = 'v14';
 const TABS = [
   { id: 'artikel', ico: 'der', name: 'Artikel', title: 'Genul substantivelor',
     desc: 'Exersezi <span class="art der">der</span> / <span class="art die">die</span> / <span class="art das">das</span> pe cuvintele tale din Duolingo, cu regulile de terminație (-ung, -chen, -keit…).' },
@@ -202,6 +218,8 @@ const TABS = [
     desc: 'Articolul corect după prepoziție și Wechselpräpositionen: unde? (dativ) sau încotro? (acuzativ). Genitivul (<i>wegen des Regens</i>, <i>das Auto meines Vaters</i>, <i>des Hauses</i>) și n-Deklination (<i>den Kollegen</i>, <i>dem Jungen</i>, <i>des Namens</i>). Verbele cu prepoziție fixă (<i>warten auf</i>, <i>teilnehmen an</i>, <i>stolz auf</i>), da-/wo-compusele (<i>darauf</i>, <i>worüber</i>; pentru persoane <i>auf ihn</i>, <i>mit wem</i>) și contracțiile (<i>am</i>, <i>im</i>, <i>ins</i>, <i>zum</i>, <i>zur</i>, <i>vom</i>, <i>beim</i>).' },
   { id: 'pronomen', ico: 'mir', name: 'Pronomen', title: 'Pronumele',
     desc: 'Pronume personale la acuzativ și dativ (<i>ihn/ihm</i>, <i>sie/ihr</i>, <i>ihnen/Ihnen</i>), reflexive (<i>ich freue mich</i>, <i>ich wasche mir die Hände</i>) și relative (<i>der Mann, dem ich helfe</i>; <i>denen</i>, <i>dessen</i>, <i>deren</i>).' },
+  { id: 'satzbau', ico: 'V2', name: 'Satzbau', title: 'Topica (ordinea cuvintelor)',
+    desc: 'Pui în ordine bucățile unei propoziții, prin tap: verbul pe locul 2 și inversiunea (<i>Morgen fahre ich …</i>), cu verbe separabile, modale și Perfekt; subordonatele cu verbul la final (<i>weil, dass, wenn, als, ob, obwohl</i>, întrebări indirecte), <i>denn</i> vs. <i>weil</i>, <i>deshalb</i>/<i>trotzdem</i>; poziția lui <i>nicht</i> și <i>kein</i>; <i>zu</i> + infinitiv, <i>um … zu</i>, <i>damit</i>; propozițiile relative.' },
   { id: 'profil', ico: '⚙', name: 'Profil', title: 'Profil și conexiune', desc: '' }
 ];
 const LESSON_TABS = TABS.filter(t => t.id !== 'profil').map(t => t.id);
@@ -213,6 +231,7 @@ const kindOf = item => {
   if (item.tip === 'declinare') return v.caz === 'gen' ? 'Substantivul la genitiv' : 'n-Deklination';
   if (item.tip === 'comparatie') return v.grad === 'sup' ? 'Superlativul' : 'Comparativul';
   if (item.tip === 'regim') return v.parte === 'art' ? 'Cazul cerut de verb / adjectiv' : 'Prepoziția fixă';
+  if (item.tip === 'ordine') return 'Pune bucățile în ordine';
   return KIND[item.tip] || '';
 };
 // woda: one neutral label for da-/wo- compounds and the person forms, so the label doesn't give the answer away
@@ -399,7 +418,27 @@ function glossOf(item, w) {
   const g = item.glosar || {};
   if (w in g) return g[w];
   const k = Object.keys(g).find(x => x.toLowerCase() === w.toLowerCase());
-  return k ? g[k] : null;
+  if (k) return g[k];
+  if (!w.includes(' ')) return null;  // a word-order tile with several words: "der Zug" -> "der: (articol) · Zug: tren"
+  const parts = w.split(' ').map(x => [x, glossOf(item, x)]).filter(([, t]) => t);
+  return parts.length ? parts.map(([x, t]) => `${x}: ${t}`).join(' · ') : null;
+}
+/* ---------- word order (tip ordine) ---------- */
+// the tiles + distractors, shuffled the same way every time for an item, never already in the right order
+function orderPool(item) {
+  const pool = [...(item.bucati || []), ...(item.distractori || [])];
+  let h = 7; for (const c of item.id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const idx = pool.map((_, i) => i);
+  for (let i = idx.length - 1; i > 0; i--) { h = (Math.imul(h, 1103515245) + 12345) >>> 0; const j = h % (i + 1); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+  if (idx.every((x, i) => x === i)) idx.push(idx.shift());
+  return idx.map(i => pool[i]);
+}
+const orderAtStart = item => { const b = item.propozitie.split('___')[0]; return !b.trim() || /[.?!]\s*$/.test(b); };
+const cap1 = s => s.charAt(0).toUpperCase() + s.slice(1);
+// the placed tiles as one string; a tile that opens the sentence gets its capital letter here (tiles are written lowercase)
+function orderText(item, placed) {
+  const pool = orderPool(item), s = placed.map(i => pool[i]).join(' ');
+  return orderAtStart(item) ? cap1(s) : s;
 }
 const ART_CLASS = { der: 'm', den: 'm', dem: 'm', des: 'm', die: 'f', das: 'n' };
 // Sentence with hoverable words; the gap shows "___" until answered, then the typed answer (and the right one if wrong).
@@ -448,10 +487,17 @@ function checkCal(unknown) {
 }
 function check() {
   if (runItem()?.tip === 'substantiv') return checkCal(false);
-  const input = document.getElementById('ans');
-  const given = normalize(input?.value || '');
-  if (!given) { input?.focus(); return; }
   const item = runItem();
+  let given;
+  if (item.tip === 'ordine') {
+    const placed = S.run.placed || [];
+    if (placed.length !== item.bucati.length) return;
+    given = orderText(item, placed);
+  } else {
+    const input = document.getElementById('ans');
+    given = normalize(input?.value || '');
+    if (!given) { input?.focus(); return; }
+  }
   const ok = item.raspunsuri.includes(given);
   const caseOnly = !ok && item.raspunsuri.some(a => a.toLowerCase() === given.toLowerCase());
   const umlautOnly = !ok && item.raspunsuri.some(a => a.replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss') === given || a.normalize('NFD').replace(/[̈]/g, '') === given);
@@ -465,7 +511,7 @@ function check() {
 }
 function next() {
   const r = S.run;
-  r.pos++; r.state = null; r.pick = null; r.shown = Date.now(); r.roSeen = false; r.glossSeen = [];
+  r.pos++; r.state = null; r.pick = null; r.placed = []; r.shown = Date.now(); r.roSeen = false; r.glossSeen = [];
   if (r.pos >= r.order.length) r.finished = new Date().toISOString();
   saveRun(); render();
   if (r.finished) saveResult();
@@ -603,7 +649,7 @@ function calCard(compact) {
   if (!parts.length) return '';
   const d = LESSONS[parts[0]].data, n = d.itemi.length;
   return `<section class="card cal-card"><h2>Testul de calibrare</h2>
-    ${compact ? '' : `<p class="muted small">Un singur test pentru toate tipurile de lecții, în reprize de ~5 minute pe care le faci când vrei: substantive (articol + plural), terminațiile adjectivelor, cazul după prepoziții, verbele, pronumele, genitivul și comparația. Nu primești itemii greșiți din nou la final: testul măsoară. Rezultatul pune fiecare lucru în repetiția spațiată și arată primul profil.</p>`}
+    ${compact ? '' : `<p class="muted small">Un singur test pentru toate tipurile de lecții, în reprize de ~5 minute pe care le faci când vrei: substantive (articol + plural), terminațiile adjectivelor, cazul după prepoziții, verbele, pronumele, genitivul și comparația, verbele cu prepoziție și topica. Nu primești itemii greșiți din nou la final: testul măsoară. Rezultatul pune fiecare lucru în repetiția spațiată și arată primul profil.</p>`}
     <p class="small">Urmează: <b>${esc(d.titlu || d.id)}</b> · ${n} ${d.itemi[0]?.tip === 'substantiv' ? 'cuvinte' : 'propoziții'} · ~5 min${parts.length > 1 ? ` · ${parts.length} reprize rămase` : ''}</p>
     <button class="btn primary" data-act="start" data-path="${esc(parts[0])}">Începe repriza</button></section>`;
 }
@@ -613,6 +659,7 @@ function viewRun() {
   const item = runItem();
   if (!item) return `<section class="card"><p>Lecția nu mai e pe dispozitiv.</p><button class="btn" data-act="quit">Înapoi</button></section>`;
   if (item.tip === 'substantiv') return viewCalItem(item);
+  if (item.tip === 'ordine') return viewOrderItem(item);
   const total = r.order.length, pct = Math.round(100 * r.pos / total);
   const st = r.state;
   let h = `<div class="ltop"><button class="btn ghost" data-act="quit" title="Ieși din lecție">✕</button><div class="bar"><i style="width:${pct}%"></i></div>
@@ -629,6 +676,43 @@ function viewRun() {
     const note = st.ok ? '' : st.umlautOnly ? 'Aproape: lipsesc doar ä/ö/ü/ß.' : st.caseOnly ? 'Aproape: doar majuscula e greșită.' : '';
     h += `<div class="fb ${st.ok ? 'ok' : 'bad'}"><h3>${st.ok ? '✔ Corect' : '✘ Corect era: ' + esc(item.raspunsuri.join(' / '))}</h3>
       ${note ? `<p><b>${note}</b></p>` : ''}<p>${md(item.explicatie)}</p>
+      ${item.duolingo ? `<p class="small muted">Ai văzut regula în Duolingo, ${esc(item.duolingo)}.</p>` : ''}</div>
+      <div class="row" style="margin-top:14px"><button class="btn primary big" data-act="next" id="next-btn">Continuă</button></div>`;
+  }
+  return h + '</section>';
+}
+function viewOrderItem(item) {
+  const r = S.run, st = r.state, pool = orderPool(item), placed = r.placed || [];
+  const total = r.order.length, pct = Math.round(100 * r.pos / total);
+  const [before, after] = item.propozitie.split('___');
+  const words = part => esc(part).replace(WORD, w => glossOf(item, w) ? `<span class="w" data-w="${esc(w)}">${w}</span>` : w);
+  let mid;
+  if (st) mid = `<span class="built ${st.ok ? 'ok' : 'bad'}">${esc(st.given)}</span>`;
+  else if (placed.length) mid = placed.map((i, k) =>
+    `<button type="button" class="tile placed" data-act="untile" data-k="${k}" data-w="${esc(pool[i])}" title="Scoate bucata">${esc(k === 0 && orderAtStart(item) ? cap1(pool[i]) : pool[i])}</button>`).join(' ');
+  else mid = '<span class="slot-empty">&nbsp;</span>';
+  // the glossary of every tile word, behind the RO button (on a phone a tap on a tile places it, so no tooltip there)
+  const gl = pool.flatMap(t => t.split(' ')).filter((w, i, a) => a.indexOf(w) === i).map(w => [w, glossOf(item, w)]).filter(([, g]) => g)
+    .map(([w, g]) => `<b>${esc(w)}</b> ${esc(g)}`).join(' · ');
+  let h = `<div class="ltop"><button class="btn ghost" data-act="quit" title="Ieși din lecție">✕</button><div class="bar"><i style="width:${pct}%"></i></div>
+    <span class="small muted">${r.pos + 1}/${total}</span></div>
+  <section class="card item">
+    <div class="kind">${esc(kindOf(item))}${r.retried.includes(r.pos) ? ' · din nou' : ''}</div>
+    <p class="sent${st ? '' : ' order'}">${words(before ?? '')}${mid}${words(after ?? '')} <button class="ro-btn" data-act="ro" title="Traducerea propoziției și glosarul bucăților">RO</button></p>
+    <p class="ro-line" id="ro-line" ${r.roSeen || st ? '' : 'hidden'}>${esc(item.traducere)}${gl ? `<span class="ro-gl">${gl}</span>` : ''}</p>`;
+  if (!st) {
+    // used tiles keep their place (visibility: hidden) so the others don't jump; the empty bank goes away
+    h += placed.length === pool.length ? '' : `<div class="bank" role="group" aria-label="Bucățile propoziției">${pool.map((t, i) =>
+        `<button type="button" class="tile${placed.includes(i) ? ' used' : ''}" data-act="tile" data-i="${i}" data-w="${esc(t)}" ${placed.includes(i) ? 'tabindex="-1" aria-hidden="true"' : ''}>${esc(t)}</button>`).join('')}</div>`;
+    h += `<div class="order-actions"><button class="btn primary" data-act="order-check" id="order-check" ${placed.length === item.bucati.length ? '' : 'disabled'}>Verifică</button>
+        <button class="btn ghost" data-act="order-reset" ${placed.length ? '' : 'disabled'}>Ia-le înapoi</button></div>
+      ${item.distractori?.length ? `<p class="small muted">${item.distractori.length === 1 ? 'O bucată e în plus' : 'Două bucăți sunt în plus'}: nu intră în propoziție.</p>` : ''}`;
+  } else {
+    const full = a => (before ?? '') + a + (after ?? '');
+    const others = item.raspunsuri.slice(1).filter(a => a !== st.given);
+    h += `<div class="fb ${st.ok ? 'ok' : 'bad'}"><h3>${st.ok ? '✔ Corect' : '✘ Corect era: ' + esc(full(item.raspunsuri[0]))}</h3>
+      ${others.length ? `<p class="small">${st.ok ? 'Merge și' : 'Sau'}: ${others.map(a => '<i>' + esc(full(a)) + '</i>').join(' / ')}</p>` : ''}
+      <p>${md(item.explicatie)}</p>
       ${item.duolingo ? `<p class="small muted">Ai văzut regula în Duolingo, ${esc(item.duolingo)}.</p>` : ''}</div>
       <div class="row" style="margin-top:14px"><button class="btn primary big" data-act="next" id="next-btn">Continuă</button></div>`;
   }
@@ -770,8 +854,8 @@ function showTip(el) {
   el.classList.add('tip-on'); tipFor = el;
 }
 function hideTip() { tipEl.hidden = true; tipFor?.classList.remove('tip-on'); tipFor = null; }
-document.addEventListener('pointerover', e => { if (e.pointerType === 'mouse') { const w = e.target.closest('.w'); if (w) showTip(w); } });
-document.addEventListener('pointerout', e => { if (e.pointerType === 'mouse' && e.target.closest('.w')) hideTip(); });
+document.addEventListener('pointerover', e => { if (e.pointerType === 'mouse') { const w = e.target.closest('.w, .tile'); if (w) showTip(w); } });
+document.addEventListener('pointerout', e => { if (e.pointerType === 'mouse' && e.target.closest('.w, .tile')) hideTip(); });
 window.addEventListener('scroll', hideTip, { passive: true });
 
 /* ---------- events ---------- */
@@ -779,7 +863,7 @@ document.addEventListener('mousedown', e => { if (e.target.closest('.umlauts but
 document.addEventListener('submit', e => { if (e.target.matches('[data-act="check"]')) { e.preventDefault(); check(); } });
 document.addEventListener('click', async e => {
   const w = e.target.closest('.w');
-  if (w) { if (tipFor === w) hideTip(); else showTip(w); return; }
+  if (w && !w.closest('[data-act]')) { if (tipFor === w) hideTip(); else showTip(w); return; }
   if (tipFor) hideTip();
   const u = e.target.closest('.umlauts button');
   if (u) { const input = document.getElementById(u.parentElement.dataset.target); if (input) insertAtCursor(input, u.dataset.ch); return; }
@@ -796,6 +880,16 @@ document.addEventListener('click', async e => {
     document.getElementById('ans')?.focus();
   }
   else if (act === 'cal-unknown') checkCal(true);
+  else if (act === 'tile' || act === 'untile' || act === 'order-reset') {
+    const r = S.run; if (!r || r.state) return;
+    r.placed = r.placed || [];
+    if (act === 'tile') { const i = +b.dataset.i; if (!r.placed.includes(i)) r.placed.push(i); }
+    else if (act === 'untile') r.placed.splice(+b.dataset.k, 1);
+    else r.placed = [];
+    hideTip(); saveRun(); render();
+    if (act === 'tile' && r.placed.length === runItem()?.bucati.length) document.getElementById('order-check')?.focus({ preventScroll: true });
+  }
+  else if (act === 'order-check') check();
   else if (act === 'ro') { const l = document.getElementById('ro-line'); l.hidden = !l.hidden; if (!l.hidden && S.run) { S.run.roSeen = true; saveRun(); } }
   else if (act === 'next') next();
   else if (act === 'quit') {
@@ -840,6 +934,7 @@ document.addEventListener('click', async e => {
 // Enter on the feedback screen moves on (the answer box handles its own Enter through the form)
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter' && S.run && S.run.state && !S.run.finished && !e.target.closest('form')) { e.preventDefault(); next(); }
+  else if (e.key === 'Enter' && S.run && !S.run.state && !S.run.finished && runItem()?.tip === 'ordine' && !e.target.closest('button')) { e.preventDefault(); check(); }
   if (e.key === 'Escape') hideTip();
 });
 
