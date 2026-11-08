@@ -143,7 +143,7 @@ a { color: var(--der); }
 <div class="tip" id="tip" hidden></div>
 
 <script>
-const APP_VERSION = 'v3';
+const APP_VERSION = 'v4';
 const TABS = [
   { id: 'artikel', ico: 'der', name: 'Artikel', title: 'Genul substantivelor',
     desc: 'Exersezi <span class="art der">der</span> / <span class="art die">die</span> / <span class="art das">das</span> pe cuvintele tale din Duolingo, cu regulile de terminație (-ung, -chen, -keit…).' },
@@ -186,7 +186,7 @@ async function gh(path, opts = {}) {
 }
 async function ghJson(path, opts) {
   const r = await gh(path, opts);
-  if (!r.ok) throw new GhError(r.status, await r.text());
+  if (!r.ok) { const e = new GhError(r.status, await r.text()); e.step = `${opts?.method || 'GET'} ${path.split('?')[0]}`; throw e; }
   return r.json();
 }
 // One commit with any number of files; a null value deletes the path (only if it still exists).
@@ -255,6 +255,11 @@ function flushQueue() {  // one upload at a time, even if a refresh and a finish
         QUEUE.shift();
         store.set('sdl-queue', QUEUE);
       }
+      store.del('sdl-lasterr');
+    } catch (e) {
+      // keep the real reason visible on the lesson tabs, not only in Profil
+      store.set('sdl-lasterr', { at: Date.now(), status: e?.status ?? '?', step: e?.step || '', text: String(e?.message || e).slice(0, 300) });
+      throw e;
     } finally { FLUSHING = null; }
   })();
   return FLUSHING;
@@ -262,8 +267,8 @@ function flushQueue() {  // one upload at a time, even if a refresh and a finish
 async function refresh() {
   if (!GH.token) { S.connected = false; render(); return; }
   S.syncing = true; render();
+  try { await flushQueue(); } catch (e) { /* reason kept in sdl-lasterr; still pull new lessons */ }
   try {
-    await flushQueue();
     await pullLessons();
     S.connected = true;
   } catch (e) { S.connected = false; if (e?.status !== 0) S.msg = { bad: true, text: errText(e) }; }
@@ -396,7 +401,12 @@ function viewLesson(t) {
   if (!n) h += `<p class="small muted">${GH.token ? (S.syncing ? 'Verific dacă au apărut lecții noi…' : 'Nu sunt lecții pregătite în acest tab. Generatorul de pe PC le adaugă după ce faci lecții.') : 'Conectează aplicația la repo-ul de date din tab-ul Profil.'}</p>`;
   else if (list[0]) h += `<p class="small muted">Urmează: ${esc(LESSONS[list[0]].data.titlu || LESSONS[list[0]].data.id)}</p>`;
   h += '</section>';
-  if (QUEUE.length) h += `<section class="card"><p class="small">⏳ ${QUEUE.length === 1 ? 'O lecție terminată așteaptă' : QUEUE.length + ' lecții terminate așteaptă'} să fie trimisă (offline). Se trimite singură când revine internetul.</p></section>`;
+  if (QUEUE.length) {
+    const le = store.get('sdl-lasterr', null);
+    h += `<section class="card"><p class="small">⏳ ${QUEUE.length === 1 ? 'O lecție terminată așteaptă' : QUEUE.length + ' lecții terminate așteaptă'} să fie trimisă.</p>
+      ${le ? `<p class="small muted">Ultima încercare (${esc(new Date(le.at).toLocaleTimeString('ro-RO'))}): ${le.status === 0 ? 'fără internet' : `eroare ${esc(le.status)} la <code>${esc(le.step)}</code> — ${esc(le.text)}`}</p>` : ''}
+      <button class="btn" data-act="flush">Trimite acum</button></section>`;
+  }
   if (INSTALL) h += installCard();
   return h;
 }
@@ -549,6 +559,11 @@ document.addEventListener('click', async e => {
     } catch (err) { S.msg = { bad: true, text: errText(err) }; }
     render();
   } else if (act === 'sync') { S.msg = null; await refresh(); }
+  else if (act === 'flush') {
+    b.disabled = true; b.textContent = 'Trimit…';
+    try { await flushQueue(); await pullLessons(); S.connected = true; } catch (err) { /* reason stored in sdl-lasterr */ }
+    render();
+  }
   else if (act === 'install') {
     if (INSTALL) { INSTALL.prompt(); await INSTALL.userChoice.catch(() => {}); INSTALL = null; render(); }
   } else if (act === 'update') {
