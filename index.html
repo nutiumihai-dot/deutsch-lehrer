@@ -55,6 +55,8 @@ nav.tabs button { flex: 1; max-width: 140px; border: 0; background: none; color:
   padding: 6px 2px; border-radius: 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 nav.tabs button .ico { font-size: 18px; line-height: 1; font-weight: 700; }
 nav.tabs button.on { color: var(--fg); background: var(--surface-2); }
+body.in-lesson nav.tabs { display: none; }
+body.in-lesson { padding-bottom: 24px; }
 @media (min-width: 760px) {
   body { padding-bottom: 24px; }
   nav.tabs { position: static; max-width: 760px; margin: 4px auto 0; border: 0; background: none; gap: 6px; padding: 0 16px; }
@@ -65,10 +67,13 @@ nav.tabs button.on { color: var(--fg); background: var(--surface-2); }
 .muted { color: var(--muted); }
 .small { font-size: 13px; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.between { justify-content: space-between; }
 .btn { border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: inherit; font-size: 15px; padding: 10px 16px;
   border-radius: 10px; cursor: pointer; }
 .btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
 .btn.danger { color: var(--bad); }
+.btn.ghost { border-color: transparent; background: none; color: var(--muted); }
+.btn.big { font-size: 17px; padding: 13px 22px; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 label.f { display: block; font-size: 13px; color: var(--muted); margin: 10px 0; }
 label.f input { display: block; width: 100%; margin-top: 4px; padding: 10px 12px; font: inherit; font-size: 16px; color: var(--fg);
@@ -79,17 +84,52 @@ label.f input { display: block; width: 100%; margin-top: 4px; padding: 10px 12px
 .stat div { flex: 1; background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
 .stat b { display: block; font-size: 22px; }
 .art { font-weight: 700; }
-.art.der { color: var(--der); } .art.die { color: var(--die); } .art.das { color: var(--das); }
+.art.der, .g-m { color: var(--der); } .art.die, .g-f { color: var(--die); } .art.das, .g-n { color: var(--das); }
 .msg { margin-top: 10px; font-size: 14px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); }
 .msg.ok { background: var(--das-soft); color: var(--das); }
 .msg.bad { background: var(--die-soft); color: var(--die); }
-/* German letters under the answer box: tap inserts at the cursor */
 .umlauts { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-.umlauts button { min-width: 44px; height: 40px; border-radius: 9px; border: 1px solid var(--line); background: var(--surface-2);
+.umlauts { flex-wrap: nowrap; }
+.umlauts button { flex: 1 1 0; min-width: 0; max-width: 56px; height: 44px; border-radius: 9px; border: 1px solid var(--line); background: var(--surface-2);
   color: var(--fg); font: inherit; font-size: 18px; cursor: pointer; }
 .umlauts button:active { transform: scale(.96); }
 ol.steps { padding-left: 20px; margin: 8px 0; } ol.steps li { margin: 4px 0; }
 a { color: var(--der); }
+
+/* ---------- lesson player ---------- */
+.ltop { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.bar { flex: 1; height: 8px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--das); border-radius: 99px; transition: width .25s; }
+.item { padding: 22px 18px; }
+.item .kind { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 10px; }
+.sent { font-size: 23px; line-height: 1.6; margin: 0 0 6px; }
+.w { cursor: help; border-bottom: 1px dotted transparent; border-radius: 3px; }
+.w:hover, .w.tip-on { background: var(--surface-2); border-bottom-color: var(--muted); }
+.gap { display: inline-block; min-width: 72px; border-bottom: 3px solid var(--fg); text-align: center; padding: 0 6px; line-height: 1.2; color: var(--muted); }
+.gap.ok { border-color: var(--ok); color: var(--ok); font-weight: 600; }
+.gap.bad { border-color: var(--bad); color: var(--bad); font-weight: 600; text-decoration: line-through; }
+.hint { font-size: 15px; color: var(--muted); }
+.hint b { color: var(--fg); }
+.ro-btn { border: 1px solid var(--line); background: var(--surface-2); color: var(--muted); font: inherit; font-size: 12px; font-weight: 700;
+  border-radius: 7px; padding: 3px 8px; cursor: pointer; vertical-align: middle; }
+.ro-line { margin: 8px 0 0; color: var(--muted); font-style: italic; min-height: 0; }
+.answer { display: flex; gap: 8px; margin-top: 18px; }
+.answer input { flex: 1; min-width: 0; padding: 12px 14px; font: inherit; font-size: 20px; color: var(--fg); background: var(--bg);
+  border: 2px solid var(--line); border-radius: 12px; }
+.answer input:focus { outline: none; border-color: var(--fg); }
+.fb { margin-top: 16px; padding: 14px 16px; border-radius: 12px; }
+.fb.ok { background: var(--das-soft); }
+.fb.bad { background: var(--die-soft); }
+.fb h3 { margin: 0 0 4px; font-size: 17px; }
+.fb.ok h3 { color: var(--ok); } .fb.bad h3 { color: var(--bad); }
+.fb p { margin: 4px 0 0; }
+.tip { position: fixed; z-index: 50; max-width: 260px; background: var(--fg); color: var(--bg); padding: 6px 10px; border-radius: 8px;
+  font-size: 14px; line-height: 1.35; pointer-events: none; box-shadow: var(--shadow); }
+.tip[hidden] { display: none; }
+.sum-list { list-style: none; padding: 0; margin: 10px 0 0; }
+.sum-list li { padding: 10px 0; border-top: 1px solid var(--line); }
+.sum-list .s { font-size: 16px; }
+.big-score { font-size: 44px; font-weight: 800; line-height: 1; }
 </style>
 </head>
 <body>
@@ -100,9 +140,10 @@ a { color: var(--der); }
 </header>
 <nav class="tabs" id="tabs"></nav>
 <main id="view"></main>
+<div class="tip" id="tip" hidden></div>
 
 <script>
-const APP_VERSION = 'v2';
+const APP_VERSION = 'v3';
 const TABS = [
   { id: 'artikel', ico: 'der', name: 'Artikel', title: 'Genul substantivelor',
     desc: 'Exersezi <span class="art der">der</span> / <span class="art die">die</span> / <span class="art das">das</span> pe cuvintele tale din Duolingo, cu regulile de terminație (-ung, -chen, -keit…).' },
@@ -114,6 +155,8 @@ const TABS = [
     desc: 'Articolul corect după prepoziție și Wechselpräpositionen: unde? (dativ) sau încotro? (acuzativ).' },
   { id: 'profil', ico: '⚙', name: 'Profil', title: 'Profil și conexiune', desc: '' }
 ];
+const LESSON_TABS = TABS.filter(t => t.id !== 'profil').map(t => t.id);
+const KIND = { articol: 'Articolul', plural: 'Pluralul', adjectiv: 'Terminația adjectivului', caz: 'Cazul după prepoziție' };
 
 /* ---------- storage + GitHub (same pattern as Summit Building) ---------- */
 const store = {
@@ -122,10 +165,16 @@ const store = {
   del(k) { try { localStorage.removeItem(k); } catch (e) {} }
 };
 const GH = store.get('sdl-gh', null) || { owner: 'nutiumihai-dot', repo: 'deutsch-lehrer-date', branch: 'main', token: '' };
-const S = { tab: store.get('sdl-tab', 'artikel'), counts: {}, connected: false, msg: null };
+// LESSONS: path -> {sha, data} for every prepared lesson, kept on the device so lessons work offline.
+// DONE: paths finished on this device (hidden until the generator removes them). QUEUE: results not yet committed.
+let LESSONS = store.get('sdl-lessons', {});
+let DONE = store.get('sdl-done', []);
+let QUEUE = store.get('sdl-queue', []);
+const S = { tab: store.get('sdl-tab', 'artikel'), connected: false, syncing: false, msg: null, run: store.get('sdl-run', null) };
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const enc = s => { const b = new TextEncoder().encode(s); let bin = ''; for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(bin); };
+const dec = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g, '')), c => c.charCodeAt(0)));
 const cpath = p => p.split('/').map(encodeURIComponent).join('/');
 class GhError extends Error { constructor(status, msg) { super(msg); this.status = status; } }
 
@@ -140,21 +189,20 @@ async function ghJson(path, opts) {
   if (!r.ok) throw new GhError(r.status, await r.text());
   return r.json();
 }
-async function listDir(path) {
-  const r = await gh(`/contents/${cpath(path)}?ref=${encodeURIComponent(GH.branch)}`);
-  if (r.status === 404) return [];
-  if (!r.ok) throw new GhError(r.status, await r.text());
-  const j = await r.json();
-  return Array.isArray(j) ? j : [];
-}
-// One commit with any number of files, through the Git Data API; retries if someone else pushed in between.
+// One commit with any number of files; a null value deletes the path (only if it still exists).
 async function commitFiles(files, message) {
   for (let attempt = 0; attempt < 3; attempt++) {
     const ref = await ghJson(`/git/ref/heads/${GH.branch}`);
     const head = ref.object.sha;
     const baseTree = (await ghJson(`/git/commits/${head}`)).tree.sha;
+    const existing = new Set();
+    if (Object.values(files).some(v => v === null)) {
+      const t = await ghJson(`/git/trees/${baseTree}?recursive=1`);
+      t.tree.forEach(x => existing.add(x.path));
+    }
     const entries = [];
     for (const [path, text] of Object.entries(files)) {
+      if (text === null) { if (existing.has(path)) entries.push({ path, mode: '100644', type: 'blob', sha: null }); continue; }
       const blob = await ghJson('/git/blobs', { method: 'POST', body: JSON.stringify({ content: enc(text), encoding: 'base64' }) });
       entries.push({ path, mode: '100644', type: 'blob', sha: blob.sha });
     }
@@ -179,15 +227,53 @@ function deviceId() {
   return id;
 }
 
+/* ---------- sync: download prepared lessons, upload finished ones ---------- */
+async function pullLessons() {
+  const ref = await ghJson(`/git/ref/heads/${GH.branch}`);
+  const commit = await ghJson(`/git/commits/${ref.object.sha}`);
+  const tree = await ghJson(`/git/trees/${commit.tree.sha}?recursive=1`);
+  const remote = tree.tree.filter(x => x.type === 'blob' && /^lectii\/pregatite\/[^/]+\/[^/]+\.json$/.test(x.path));
+  const next = {};
+  for (const f of remote) {
+    if (LESSONS[f.path]?.sha === f.sha) { next[f.path] = LESSONS[f.path]; continue; }
+    const b = await ghJson(`/git/blobs/${f.sha}`);
+    try { next[f.path] = { sha: f.sha, data: JSON.parse(dec(b.content)) }; } catch (e) { /* skip broken file */ }
+  }
+  LESSONS = next;
+  store.set('sdl-lessons', LESSONS);
+  // a finished lesson stays hidden until the generator removes it from the buffer
+  DONE = DONE.filter(p => LESSONS[p]);
+  store.set('sdl-done', DONE);
+}
+let FLUSHING = null;
+function flushQueue() {  // one upload at a time, even if a refresh and a finished lesson race
+  if (!FLUSHING) FLUSHING = (async () => {
+    try {
+      while (QUEUE.length) {
+        const job = QUEUE[0];
+        await commitFiles(job.files, job.message);
+        QUEUE.shift();
+        store.set('sdl-queue', QUEUE);
+      }
+    } finally { FLUSHING = null; }
+  })();
+  return FLUSHING;
+}
 async function refresh() {
   if (!GH.token) { S.connected = false; render(); return; }
+  S.syncing = true; render();
   try {
-    const results = await Promise.all(TABS.filter(t => t.id !== 'profil').map(async t =>
-      [t.id, (await listDir(`lectii/pregatite/${t.id}`)).filter(f => f.name.endsWith('.json')).length]));
-    S.counts = Object.fromEntries(results);
+    await flushQueue();
+    await pullLessons();
     S.connected = true;
-  } catch (e) { S.connected = false; S.msg = { bad: true, text: errText(e) }; }
-  render();
+  } catch (e) { S.connected = false; if (e?.status !== 0) S.msg = { bad: true, text: errText(e) }; }
+  S.syncing = false;
+  if (!S.run) render();
+}
+window.addEventListener('online', () => refresh());
+
+function available(tab) {
+  return Object.keys(LESSONS).filter(p => p.startsWith(`lectii/pregatite/${tab}/`) && !DONE.includes(p)).sort();
 }
 
 /* ---------- German letters under any answer box ---------- */
@@ -204,8 +290,8 @@ function insertAtCursor(input, ch) {
 /* ---------- install as an app ---------- */
 let INSTALL = null;
 const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
-window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); INSTALL = e; render(); });
-window.addEventListener('appinstalled', () => { INSTALL = null; render(); });
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); INSTALL = e; if (!S.run) render(); });
+window.addEventListener('appinstalled', () => { INSTALL = null; if (!S.run) render(); });
 function installCard() {
   if (standalone()) return '';
   if (INSTALL) return `<section class="card"><h2>Instalează aplicația</h2>
@@ -217,18 +303,149 @@ function installCard() {
     <b>iPhone (Safari):</b> butonul Share → <i>Add to Home Screen</i>.</p></section>`;
 }
 
+/* ---------- text helpers for the player ---------- */
+// **bold**, *italic* inside explanations (after escaping)
+const md = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*(.+?)\*/g, '<i>$1</i>');
+const WORD = /[A-Za-zÄÖÜäöüß][A-Za-zÄÖÜäöüß'\-]*/g;
+function glossOf(item, w) {
+  const g = item.glosar || {};
+  if (w in g) return g[w];
+  const k = Object.keys(g).find(x => x.toLowerCase() === w.toLowerCase());
+  return k ? g[k] : null;
+}
+const ART_CLASS = { der: 'm', den: 'm', dem: 'm', des: 'm', die: 'f', das: 'n' };
+// Sentence with hoverable words; the gap shows "___" until answered, then the typed answer (and the right one if wrong).
+function sentenceHTML(item, state) {
+  const [before, after] = item.propozitie.split('___');
+  const words = part => esc(part).replace(WORD, w => glossOf(item, w) ? `<span class="w" data-w="${esc(w)}">${w}</span>` : w);
+  let gap;
+  if (!state) gap = `<span class="gap">${item.indiciu ? '…' : '&nbsp;'}</span>`;
+  else if (state.ok) gap = `<span class="gap ok w" data-w="${esc(state.given)}">${esc(state.given)}</span>`;
+  else gap = `<span class="gap bad">${esc(state.given || '—')}</span> <span class="gap ok w" data-w="${esc(item.raspunsuri[0])}">${esc(item.raspunsuri[0])}</span>`;
+  return words(before ?? '') + gap + words(after ?? '');
+}
+
+/* ---------- the run: one lesson in progress, persisted so it survives a reload ---------- */
+function startLesson(path) {
+  const data = LESSONS[path]?.data;
+  if (!data) return;
+  S.run = { path, id: data.id, tab: data.tab, titlu: data.titlu || '', order: data.itemi.map((_, i) => i), pos: 0,
+    answers: [], retried: [], state: null, started: new Date().toISOString(), shown: Date.now(), roSeen: false, glossSeen: [] };
+  saveRun(); render();
+}
+function saveRun() { store.set('sdl-run', S.run); }
+const runItem = () => LESSONS[S.run.path]?.data.itemi[S.run.order[S.run.pos]];
+function normalize(s) { return s.trim().replace(/\s+/g, ' '); }
+function check() {
+  const input = document.getElementById('ans');
+  const given = normalize(input?.value || '');
+  if (!given) { input?.focus(); return; }
+  const item = runItem();
+  const ok = item.raspunsuri.includes(given);
+  const caseOnly = !ok && item.raspunsuri.some(a => a.toLowerCase() === given.toLowerCase());
+  const umlautOnly = !ok && item.raspunsuri.some(a => a.replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss') === given || a.normalize('NFD').replace(/[̈]/g, '') === given);
+  const r = S.run;
+  r.state = { given, ok, caseOnly, umlautOnly };
+  r.answers.push({ item: item.id, raspuns: given, corect: ok, ms: Date.now() - r.shown, incercare: r.retried.includes(r.pos) ? 2 : 1,
+    traducereVazuta: r.roSeen, glosarVazut: r.glossSeen.slice() });
+  // a wrong item comes back once at the end of the lesson
+  if (!ok && !r.retried.includes(r.pos)) { r.order.push(r.order[r.pos]); r.retried.push(r.order.length - 1); }
+  saveRun(); render();
+}
+function next() {
+  const r = S.run;
+  r.pos++; r.state = null; r.shown = Date.now(); r.roSeen = false; r.glossSeen = [];
+  if (r.pos >= r.order.length) r.finished = new Date().toISOString();
+  saveRun(); render();
+  if (r.finished) saveResult();
+}
+async function saveResult() {
+  const r = S.run;
+  if (r.saved) return;
+  const data = LESSONS[r.path].data;
+  const month = r.started.slice(0, 7);
+  const result = { lectie: r.id, tab: r.tab, fisier: r.path, inceput: r.started, sfarsit: r.finished, dispozitiv: deviceId(), app: APP_VERSION,
+    corecte: r.answers.filter(a => a.incercare === 1 && a.corect).length, total: data.itemi.length, raspunsuri: r.answers };
+  const files = {
+    [`rezultate/${month}/${r.id}.json`]: JSON.stringify(result, null, 1) + '\n',
+    [`lectii/arhiva/${month}/${r.id}.json`]: JSON.stringify(data, null, 1) + '\n',
+    [r.path]: null
+  };
+  QUEUE.push({ files, message: `App: lecție ${r.tab} ${r.id} (${result.corecte}/${result.total})` });
+  store.set('sdl-queue', QUEUE);
+  if (!DONE.includes(r.path)) DONE.push(r.path);
+  store.set('sdl-done', DONE);
+  r.saved = true; saveRun();
+  if (!GH.token) r.syncErr = 'Aplicația nu e conectată la repo-ul de date (tab-ul Profil).';
+  else try { await flushQueue(); r.synced = true; } catch (e) { r.syncErr = e?.status === 0 ? 'offline' : errText(e); }
+  saveRun();
+  if (S.run === r) render();
+}
+function quit() {
+  S.run = null; store.del('sdl-run'); hideTip(); render(); window.scrollTo(0, 0);
+}
+
 /* ---------- views ---------- */
 function viewLesson(t) {
-  const n = S.counts[t.id] ?? 0;
-  return `<section class="card"><h2>${esc(t.title)}</h2><p class="muted">${t.desc}</p>
-    <div class="stat"><div><span class="muted small">Lecții pregătite</span><b>${S.connected ? n : '–'}</b></div>
+  const list = available(t.id);
+  const n = list.length;
+  let h = `<section class="card"><h2>${esc(t.title)}</h2><p class="muted">${t.desc}</p>
+    <div class="stat"><div><span class="muted small">Lecții pregătite</span><b>${n}</b></div>
       <div><span class="muted small">Durată</span><b>~5 min</b></div></div>
-    <button class="btn primary" disabled>Lecție nouă</button>
-    <p class="small muted">Butonul e inactiv intenționat: aplicația e în faza F0, adică doar legătura cu datele. Lecțiile apar după F1 (dicționarul de substantive) și F2 (playerul de lecții).</p></section>
-    ${INSTALL ? installCard() : ''}`;
+    <button class="btn primary big" data-act="start" data-path="${esc(list[0] || '')}" ${n ? '' : 'disabled'}>Lecție nouă</button>`;
+  if (!n) h += `<p class="small muted">${GH.token ? (S.syncing ? 'Verific dacă au apărut lecții noi…' : 'Nu sunt lecții pregătite în acest tab. Generatorul de pe PC le adaugă după ce faci lecții.') : 'Conectează aplicația la repo-ul de date din tab-ul Profil.'}</p>`;
+  else if (list[0]) h += `<p class="small muted">Urmează: ${esc(LESSONS[list[0]].data.titlu || LESSONS[list[0]].data.id)}</p>`;
+  h += '</section>';
+  if (QUEUE.length) h += `<section class="card"><p class="small">⏳ ${QUEUE.length === 1 ? 'O lecție terminată așteaptă' : QUEUE.length + ' lecții terminate așteaptă'} să fie trimisă (offline). Se trimite singură când revine internetul.</p></section>`;
+  if (INSTALL) h += installCard();
+  return h;
+}
+function viewRun() {
+  const r = S.run;
+  if (r.finished) return viewSummary();
+  const item = runItem();
+  if (!item) return `<section class="card"><p>Lecția nu mai e pe dispozitiv.</p><button class="btn" data-act="quit">Înapoi</button></section>`;
+  const total = r.order.length, pct = Math.round(100 * r.pos / total);
+  const st = r.state;
+  let h = `<div class="ltop"><button class="btn ghost" data-act="quit" title="Ieși din lecție">✕</button><div class="bar"><i style="width:${pct}%"></i></div>
+    <span class="small muted">${r.pos + 1}/${total}</span></div>
+  <section class="card item">
+    <div class="kind">${esc(KIND[item.tip] || '')}${r.retried.includes(r.pos) ? ' · din nou' : ''}</div>
+    <p class="sent">${sentenceHTML(item, st)} <button class="ro-btn" data-act="ro" title="Traducerea propoziției">RO</button></p>
+    ${item.indiciu ? `<div class="hint">${item.tip === 'adjectiv' ? 'Adjectivul' : 'Indiciu'}: <b>${esc(item.indiciu)}</b></div>` : ''}
+    <p class="ro-line" id="ro-line" ${r.roSeen || st ? '' : 'hidden'}>${esc(item.traducere)}</p>`;
+  if (!st) {
+    h += `<form class="answer" data-act="check" autocomplete="off"><input id="ans" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="Răspunsul tău"><button class="btn primary">Verifică</button></form>
+      ${umlautBar('ans')}`;
+  } else {
+    const note = st.ok ? '' : st.umlautOnly ? 'Aproape: lipsesc doar ä/ö/ü/ß.' : st.caseOnly ? 'Aproape: doar majuscula e greșită.' : '';
+    h += `<div class="fb ${st.ok ? 'ok' : 'bad'}"><h3>${st.ok ? '✔ Corect' : '✘ Corect era: ' + esc(item.raspunsuri.join(' / '))}</h3>
+      ${note ? `<p><b>${note}</b></p>` : ''}<p>${md(item.explicatie)}</p>
+      ${item.duolingo ? `<p class="small muted">Ai văzut regula în Duolingo, ${esc(item.duolingo)}.</p>` : ''}</div>
+      <div class="row" style="margin-top:14px"><button class="btn primary big" data-act="next" id="next-btn">Continuă</button></div>`;
+  }
+  return h + '</section>';
+}
+function viewSummary() {
+  const r = S.run, data = LESSONS[r.path]?.data || { itemi: [] };
+  const first = r.answers.filter(a => a.incercare === 1);
+  const good = first.filter(a => a.corect).length;
+  const wrongIds = [...new Set(first.filter(a => !a.corect).map(a => a.item))];
+  const byId = Object.fromEntries(data.itemi.map(i => [i.id, i]));
+  let h = `<section class="card"><h2>Lecție terminată</h2>
+    <div class="row between"><div><div class="big-score">${good}/${first.length}</div><div class="muted small">corecte din prima</div></div></div>`;
+  if (wrongIds.length) {
+    h += `<h2 style="margin-top:18px">De reținut</h2><ul class="sum-list">` + wrongIds.map(id => {
+      const it = byId[id]; if (!it) return '';
+      return `<li><div class="s">${esc(it.propozitie.replace('___', it.raspunsuri[0]))}</div><div class="small muted">${md(it.explicatie)}</div></li>`;
+    }).join('') + '</ul>';
+  } else h += '<p>Totul corect din prima. 👏</p>';
+  h += `<p class="small muted" style="margin-top:14px">${r.synced ? '✔ Rezultatul e salvat în repo-ul de date.' : r.syncErr ? (r.syncErr === 'offline' ? '⏳ Ești offline: rezultatul e păstrat pe dispozitiv și se trimite singur mai târziu.' : '⚠ ' + r.syncErr + ' Rezultatul rămâne pe dispozitiv.') : 'Salvez rezultatul…'}</p>
+    <button class="btn primary big" data-act="quit">Gata</button></section>`;
+  return h;
 }
 function viewProfil() {
-  let h = `<section class="card"><h2>Conexiunea cu datele</h2>
+  return `<section class="card"><h2>Conexiunea cu datele</h2>
     <p class="muted small">Lecțiile și rezultatele stau în repo-ul tău privat de pe GitHub. Tokenul rămâne doar pe acest dispozitiv.</p>
     <div class="grid2">
       <label class="f">Utilizator GitHub<input type="text" id="gh-owner" value="${esc(GH.owner)}" autocomplete="off"></label>
@@ -250,34 +467,69 @@ function viewProfil() {
         <li>Generează, copiază tokenul și lipește-l mai sus.</li>
       </ol></details></section>
   <section class="card"><h2>Tastatura germană</h2>
-    <p class="muted small">Sub fiecare căsuță de răspuns vei avea butoanele de mai jos. Încearcă: scrie <i>die Häuser</i>.</p>
+    <p class="muted small">Sub fiecare căsuță de răspuns ai butoanele de mai jos. Încearcă: scrie <i>die Häuser</i>.</p>
     <label class="f">Probă<input type="text" id="try-umlaut" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
     ${umlautBar('try-umlaut')}</section>
   ${installCard()}
-  <section class="card"><h2>Aplicația</h2><p class="small muted">Versiunea ${APP_VERSION} · dispozitiv ${esc(deviceId())}</p>
-    <button class="btn" data-act="update">Caută actualizări</button></section>`;
-  return h;
+  <section class="card"><h2>Aplicația</h2><p class="small muted">Versiunea ${APP_VERSION} · dispozitiv ${esc(deviceId())}${QUEUE.length ? ` · ${QUEUE.length} în așteptare` : ''}</p>
+    <div class="row"><button class="btn" data-act="sync">Sincronizează acum</button><button class="btn" data-act="update">Caută actualizări</button></div></section>`;
 }
 function render() {
-  document.getElementById('conn').textContent = S.connected ? 'conectat' : (GH.token ? 'fără legătură' : 'neconectat');
+  document.getElementById('conn').textContent = S.syncing ? 'sincronizez…' : S.connected ? 'conectat' : (GH.token ? 'offline' : 'neconectat');
   document.getElementById('conn').classList.toggle('on', S.connected);
+  document.body.classList.toggle('in-lesson', !!S.run);
   document.getElementById('tabs').innerHTML = TABS.map(t =>
     `<button data-tab="${t.id}" class="${S.tab === t.id ? 'on' : ''}"><span class="ico">${esc(t.ico)}</span>${esc(t.name)}</button>`).join('');
   const t = TABS.find(x => x.id === S.tab) || TABS[0];
-  document.getElementById('view').innerHTML = t.id === 'profil' ? viewProfil() : viewLesson(t);
+  document.getElementById('view').innerHTML = S.run ? viewRun() : t.id === 'profil' ? viewProfil() : viewLesson(t);
+  if (S.run && !S.run.finished) {
+    const a = document.getElementById('ans'); if (a) a.focus({ preventScroll: true });
+    const n = document.getElementById('next-btn'); if (n) n.focus({ preventScroll: true });
+  }
 }
+
+/* ---------- word tooltips: hover on PC, tap on phone ---------- */
+const tipEl = document.getElementById('tip');
+let tipFor = null;
+function showTip(el) {
+  const item = S.run && runItem(); if (!item) return;
+  const w = el.dataset.w, g = glossOf(item, w); if (!g) return;
+  if (S.run && !S.run.glossSeen.includes(w)) { S.run.glossSeen.push(w); saveRun(); }
+  tipEl.textContent = g; tipEl.hidden = false;
+  const r = el.getBoundingClientRect(), tw = tipEl.offsetWidth, th = tipEl.offsetHeight;
+  let x = r.left + r.width / 2 - tw / 2; x = Math.max(8, Math.min(x, innerWidth - tw - 8));
+  let y = r.top - th - 8; if (y < 8) y = r.bottom + 8;
+  tipEl.style.left = x + 'px'; tipEl.style.top = y + 'px';
+  document.querySelectorAll('.w.tip-on').forEach(x => x.classList.remove('tip-on'));
+  el.classList.add('tip-on'); tipFor = el;
+}
+function hideTip() { tipEl.hidden = true; tipFor?.classList.remove('tip-on'); tipFor = null; }
+document.addEventListener('pointerover', e => { if (e.pointerType === 'mouse') { const w = e.target.closest('.w'); if (w) showTip(w); } });
+document.addEventListener('pointerout', e => { if (e.pointerType === 'mouse' && e.target.closest('.w')) hideTip(); });
+window.addEventListener('scroll', hideTip, { passive: true });
 
 /* ---------- events ---------- */
 document.addEventListener('mousedown', e => { if (e.target.closest('.umlauts button')) e.preventDefault(); }); // keep focus in the input
+document.addEventListener('submit', e => { if (e.target.matches('[data-act="check"]')) { e.preventDefault(); check(); } });
 document.addEventListener('click', async e => {
+  const w = e.target.closest('.w');
+  if (w) { if (tipFor === w) hideTip(); else showTip(w); return; }
+  if (tipFor) hideTip();
   const u = e.target.closest('.umlauts button');
   if (u) { const input = document.getElementById(u.parentElement.dataset.target); if (input) insertAtCursor(input, u.dataset.ch); return; }
   const tab = e.target.closest('[data-tab]');
   if (tab) { S.tab = tab.dataset.tab; S.msg = null; store.set('sdl-tab', S.tab); render(); window.scrollTo(0, 0); return; }
   const b = e.target.closest('[data-act]');
-  if (!b) return;
+  if (!b || b.tagName === 'FORM') return;
   const act = b.dataset.act;
-  if (act === 'gh-save') {
+  if (act === 'start') startLesson(b.dataset.path);
+  else if (act === 'ro') { const l = document.getElementById('ro-line'); l.hidden = !l.hidden; if (!l.hidden && S.run) { S.run.roSeen = true; saveRun(); } }
+  else if (act === 'next') next();
+  else if (act === 'quit') {
+    if (S.run && !S.run.finished && S.run.pos > 0 && !confirm('Ieși din lecție? Progresul din ea se pierde, iar lecția rămâne disponibilă.')) return;
+    quit();
+  }
+  else if (act === 'gh-save') {
     GH.owner = document.getElementById('gh-owner').value.trim() || GH.owner;
     GH.repo = document.getElementById('gh-repo').value.trim() || GH.repo;
     const tok = document.getElementById('gh-token').value.trim();
@@ -287,7 +539,7 @@ document.addEventListener('click', async e => {
     await refresh();
     if (S.connected) { S.msg = { text: 'Conectat. Repo-ul de date e vizibil.' }; render(); }
   } else if (act === 'gh-forget') {
-    GH.token = ''; store.set('sdl-gh', GH); S.connected = false; S.counts = {}; S.msg = { text: 'Tokenul a fost șters de pe acest dispozitiv.' }; render();
+    GH.token = ''; store.set('sdl-gh', GH); S.connected = false; S.msg = { text: 'Tokenul a fost șters de pe acest dispozitiv.' }; render();
   } else if (act === 'gh-test') {
     b.disabled = true; S.msg = { text: 'Fac un commit de test…' }; render();
     try {
@@ -296,13 +548,19 @@ document.addEventListener('click', async e => {
       S.msg = { text: `Scrierea merge. Commit ${esc(c.sha.slice(0, 7))} în ${esc(GH.repo)}.` };
     } catch (err) { S.msg = { bad: true, text: errText(err) }; }
     render();
-  } else if (act === 'install') {
+  } else if (act === 'sync') { S.msg = null; await refresh(); }
+  else if (act === 'install') {
     if (INSTALL) { INSTALL.prompt(); await INSTALL.userChoice.catch(() => {}); INSTALL = null; render(); }
   } else if (act === 'update') {
     const reg = await navigator.serviceWorker?.getRegistration();
     if (reg) await reg.update();
     location.reload();
   }
+});
+// Enter on the feedback screen moves on (the answer box handles its own Enter through the form)
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && S.run && S.run.state && !S.run.finished && !e.target.closest('form')) { e.preventDefault(); next(); }
+  if (e.key === 'Escape') hideTip();
 });
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
