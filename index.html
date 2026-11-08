@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#181C2C">
+<title>SmartDeutschLehrer</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+/* Layout: one calm column; tabs at the top on wide screens, at the bottom on phones.
+   Article colors (der blue, die red, das green) are the app's only accents. */
+:root {
+  --bg: #F6F7FB; --surface: #FFFFFF; --surface-2: #EEF0F6; --fg: #181C2C; --muted: #646B82; --line: #DFE3EE;
+  --der: #2F6FE0; --die: #D63E3E; --das: #1C9A62;
+  --der-soft: #E3ECFC; --die-soft: #FBE5E5; --das-soft: #DDF3E9;
+  --accent: #181C2C; --accent-fg: #FFFFFF;
+  --ok: #1C9A62; --bad: #D63E3E; --warn: #C98500;
+  --shadow: 0 1px 2px rgba(24, 28, 44, .05), 0 6px 18px rgba(24, 28, 44, .06);
+  --radius: 14px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10131E; --surface: #1A1E2E; --surface-2: #242a3d; --fg: #EEF0F7; --muted: #9AA2BA; --line: #2E3449;
+    --der: #6EA0FF; --die: #FF7676; --das: #4FD197;
+    --der-soft: #1D2A47; --die-soft: #3A1E22; --das-soft: #173328;
+    --accent: #EEF0F7; --accent-fg: #10131E;
+    --ok: #4FD197; --bad: #FF7676; --warn: #F2B544;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10131E; --surface: #1A1E2E; --surface-2: #242a3d; --fg: #EEF0F7; --muted: #9AA2BA; --line: #2E3449;
+  --der: #6EA0FF; --die: #FF7676; --das: #4FD197;
+  --der-soft: #1D2A47; --die-soft: #3A1E22; --das-soft: #173328;
+  --accent: #EEF0F7; --accent-fg: #10131E;
+  --ok: #4FD197; --bad: #FF7676; --warn: #F2B544;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 var(--font); }
+body { min-height: 100vh; padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+header { padding: 20px 16px 8px; max-width: 760px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+header img { width: 40px; height: 40px; border-radius: 10px; }
+header h1 { font-size: 20px; margin: 0; letter-spacing: -.01em; }
+header .sub { color: var(--muted); font-size: 13px; }
+.chip { margin-left: auto; font-size: 12px; padding: 4px 10px; border-radius: 99px; background: var(--surface-2); color: var(--muted); white-space: nowrap; }
+.chip.on { background: var(--das-soft); color: var(--das); }
+main { max-width: 760px; margin: 0 auto; padding: 8px 16px 24px; }
+nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--line);
+  display: flex; justify-content: center; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); z-index: 5; }
+nav.tabs button { flex: 1; max-width: 140px; border: 0; background: none; color: var(--muted); font: inherit; font-size: 12px;
+  padding: 6px 2px; border-radius: 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+nav.tabs button .ico { font-size: 18px; line-height: 1; font-weight: 700; }
+nav.tabs button.on { color: var(--fg); background: var(--surface-2); }
+@media (min-width: 760px) {
+  body { padding-bottom: 24px; }
+  nav.tabs { position: static; max-width: 760px; margin: 4px auto 0; border: 0; background: none; gap: 6px; padding: 0 16px; }
+  nav.tabs button { flex-direction: row; justify-content: center; font-size: 14px; padding: 8px 12px; background: var(--surface); box-shadow: var(--shadow); max-width: none; }
+}
+.card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; margin: 14px 0; }
+.card h2 { font-size: 18px; margin: 0 0 6px; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.btn { border: 1px solid var(--line); background: var(--surface); color: var(--fg); font: inherit; font-size: 15px; padding: 10px 16px;
+  border-radius: 10px; cursor: pointer; }
+.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.btn.danger { color: var(--bad); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+label.f { display: block; font-size: 13px; color: var(--muted); margin: 10px 0; }
+label.f input { display: block; width: 100%; margin-top: 4px; padding: 10px 12px; font: inherit; font-size: 16px; color: var(--fg);
+  background: var(--bg); border: 1px solid var(--line); border-radius: 10px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+@media (max-width: 480px) { .grid2 { grid-template-columns: 1fr; } }
+.stat { display: flex; gap: 10px; margin: 12px 0; }
+.stat div { flex: 1; background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
+.stat b { display: block; font-size: 22px; }
+.art { font-weight: 700; }
+.art.der { color: var(--der); } .art.die { color: var(--die); } .art.das { color: var(--das); }
+.msg { margin-top: 10px; font-size: 14px; padding: 10px 12px; border-radius: 10px; background: var(--surface-2); }
+.msg.ok { background: var(--das-soft); color: var(--das); }
+.msg.bad { background: var(--die-soft); color: var(--die); }
+/* German letters under the answer box: tap inserts at the cursor */
+.umlauts { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.umlauts button { min-width: 44px; height: 40px; border-radius: 9px; border: 1px solid var(--line); background: var(--surface-2);
+  color: var(--fg); font: inherit; font-size: 18px; cursor: pointer; }
+.umlauts button:active { transform: scale(.96); }
+ol.steps { padding-left: 20px; margin: 8px 0; } ol.steps li { margin: 4px 0; }
+a { color: var(--der); }
+</style>
+</head>
+<body>
+<header>
+  <img src="icon-192.png" alt="">
+  <div><h1>SmartDeutschLehrer</h1><div class="sub">Gramatică prin drill, fără streak</div></div>
+  <span class="chip" id="conn">neconectat</span>
+</header>
+<nav class="tabs" id="tabs"></nav>
+<main id="view"></main>
+
+<script>
+const APP_VERSION = 'v1';
+const TABS = [
+  { id: 'artikel', ico: 'der', name: 'Artikel', title: 'Genul substantivelor',
+    desc: 'Exersezi <span class="art der">der</span> / <span class="art die">die</span> / <span class="art das">das</span> pe cuvintele tale din Duolingo, cu regulile de terminație (-ung, -chen, -keit…).' },
+  { id: 'plural', ico: 'Pl', name: 'Plural', title: 'Formele de plural',
+    desc: 'Scrii pluralul (<i>das Haus → die Häuser</i>) și exersezi Dativ plural cu -n (<i>mit den Kindern</i>).' },
+  { id: 'adjektive', ico: '-en', name: 'Adjektive', title: 'Terminațiile adjectivelor',
+    desc: 'Cele opt bucăți din Duolingo, puse la un loc ca un singur sistem: după der-cuvinte, după ein-cuvinte și fără articol, în toate cazurile.' },
+  { id: 'kasus', ico: 'Dat', name: 'Kasus', title: 'Cazuri și prepoziții',
+    desc: 'Articolul corect după prepoziție și Wechselpräpositionen: unde? (dativ) sau încotro? (acuzativ).' },
+  { id: 'profil', ico: '⚙', name: 'Profil', title: 'Profil și conexiune', desc: '' }
+];
+
+/* ---------- storage + GitHub (same pattern as Summit Building) ---------- */
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
+};
+const GH = store.get('sdl-gh', null) || { owner: 'nutiumihai-dot', repo: 'deutsch-lehrer-date', branch: 'main', token: '' };
+const S = { tab: store.get('sdl-tab', 'artikel'), counts: {}, connected: false, msg: null };
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const enc = s => { const b = new TextEncoder().encode(s); let bin = ''; for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(bin); };
+const cpath = p => p.split('/').map(encodeURIComponent).join('/');
+class GhError extends Error { constructor(status, msg) { super(msg); this.status = status; } }
+
+async function gh(path, opts = {}) {
+  try {
+    return await fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}${path}`, { cache: 'no-store', ...opts,
+      headers: { Authorization: `Bearer ${GH.token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(opts.headers || {}) } });
+  } catch (e) { throw new GhError(0, 'offline'); }
+}
+async function ghJson(path, opts) {
+  const r = await gh(path, opts);
+  if (!r.ok) throw new GhError(r.status, await r.text());
+  return r.json();
+}
+async function listDir(path) {
+  const r = await gh(`/contents/${cpath(path)}?ref=${encodeURIComponent(GH.branch)}`);
+  if (r.status === 404) return [];
+  if (!r.ok) throw new GhError(r.status, await r.text());
+  const j = await r.json();
+  return Array.isArray(j) ? j : [];
+}
+// One commit with any number of files, through the Git Data API; retries if someone else pushed in between.
+async function commitFiles(files, message) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const ref = await ghJson(`/git/ref/heads/${GH.branch}`);
+    const head = ref.object.sha;
+    const baseTree = (await ghJson(`/git/commits/${head}`)).tree.sha;
+    const entries = [];
+    for (const [path, text] of Object.entries(files)) {
+      const blob = await ghJson('/git/blobs', { method: 'POST', body: JSON.stringify({ content: enc(text), encoding: 'base64' }) });
+      entries.push({ path, mode: '100644', type: 'blob', sha: blob.sha });
+    }
+    const tree = await ghJson('/git/trees', { method: 'POST', body: JSON.stringify({ base_tree: baseTree, tree: entries }) });
+    const commit = await ghJson('/git/commits', { method: 'POST', body: JSON.stringify({ message, tree: tree.sha, parents: [head] }) });
+    const u = await gh(`/git/refs/heads/${GH.branch}`, { method: 'PATCH', body: JSON.stringify({ sha: commit.sha, force: false }) });
+    if (u.ok) return commit;
+    if (u.status !== 422 && u.status !== 409) throw new GhError(u.status, await u.text());
+  }
+  throw new GhError(409, 'conflict');
+}
+function errText(e) {
+  if (e?.status === 0) return 'Ești offline. Încearcă din nou când ai internet.';
+  if (e?.status === 401) return 'GitHub nu recunoaște tokenul (401). Copiază-l din nou, complet, sau generează unul nou.';
+  if (e?.status === 403) return 'Tokenul nu are voie să scrie (403). Verifică permisiunea Contents: Read and write.';
+  if (e?.status === 404) return 'Tokenul nu vede repo-ul de date (404). Verifică numele repo-ului și accesul tokenului la el.';
+  return 'Operația nu a reușit (' + esc(e?.status ?? '?') + ').';
+}
+function deviceId() {
+  let id = store.get('sdl-device', null);
+  if (!id) { id = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); store.set('sdl-device', id); }
+  return id;
+}
+
+async function refresh() {
+  if (!GH.token) { S.connected = false; render(); return; }
+  try {
+    const results = await Promise.all(TABS.filter(t => t.id !== 'profil').map(async t =>
+      [t.id, (await listDir(`lectii/pregatite/${t.id}`)).filter(f => f.name.endsWith('.json')).length]));
+    S.counts = Object.fromEntries(results);
+    S.connected = true;
+  } catch (e) { S.connected = false; S.msg = { bad: true, text: errText(e) }; }
+  render();
+}
+
+/* ---------- German letters under any answer box ---------- */
+function umlautBar(target) {
+  return `<div class="umlauts" data-target="${esc(target)}">${['ä', 'ö', 'ü', 'ß', 'Ä', 'Ö', 'Ü'].map(c => `<button type="button" data-ch="${c}" tabindex="-1">${c}</button>`).join('')}</div>`;
+}
+function insertAtCursor(input, ch) {
+  const s = input.selectionStart ?? input.value.length, e = input.selectionEnd ?? input.value.length;
+  input.value = input.value.slice(0, s) + ch + input.value.slice(e);
+  input.focus();
+  input.setSelectionRange(s + ch.length, s + ch.length);
+}
+
+/* ---------- views ---------- */
+function viewLesson(t) {
+  const n = S.counts[t.id] ?? 0;
+  return `<section class="card"><h2>${esc(t.title)}</h2><p class="muted">${t.desc}</p>
+    <div class="stat"><div><span class="muted small">Lecții pregătite</span><b>${S.connected ? n : '–'}</b></div>
+      <div><span class="muted small">Durată</span><b>~5 min</b></div></div>
+    <button class="btn primary" disabled>Lecție nouă</button>
+    <p class="small muted">Playerul de lecții vine în faza F2. Acum aplicația doar verifică legătura cu repo-ul de date.</p></section>`;
+}
+function viewProfil() {
+  let h = `<section class="card"><h2>Conexiunea cu datele</h2>
+    <p class="muted small">Lecțiile și rezultatele stau în repo-ul tău privat de pe GitHub. Tokenul rămâne doar pe acest dispozitiv.</p>
+    <div class="grid2">
+      <label class="f">Utilizator GitHub<input type="text" id="gh-owner" value="${esc(GH.owner)}" autocomplete="off"></label>
+      <label class="f">Repo de date<input type="text" id="gh-repo" value="${esc(GH.repo)}" autocomplete="off"></label>
+    </div>
+    <label class="f">Token<input type="password" id="gh-token" placeholder="${GH.token ? 'salvat pe acest dispozitiv' : 'github_pat_…'}" autocomplete="off"></label>
+    <div class="row">
+      <button class="btn primary" data-act="gh-save">${GH.token ? 'Salvează' : 'Conectează'}</button>
+      <button class="btn" data-act="gh-test" ${GH.token ? '' : 'disabled'}>Testează scrierea</button>
+      ${GH.token ? '<button class="btn danger" data-act="gh-forget">Șterge tokenul</button>' : ''}
+    </div>
+    ${S.msg ? `<div class="msg ${S.msg.bad ? 'bad' : 'ok'}">${S.msg.text}</div>` : ''}
+    <details class="small" style="margin-top:12px"><summary>Cum obțin tokenul</summary>
+      <ol class="steps">
+        <li>Deschide <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub → Fine-grained token nou</a>.</li>
+        <li>Nume: <b>SmartDeutschLehrer</b>; expirare: cât vrei (de exemplu 1 an).</li>
+        <li>Repository access: <b>Only select repositories</b> → <b>deutsch-lehrer-date</b>.</li>
+        <li>Permissions → Repository → <b>Contents: Read and write</b>. Nimic altceva.</li>
+        <li>Generează, copiază tokenul și lipește-l mai sus.</li>
+      </ol></details></section>
+  <section class="card"><h2>Tastatura germană</h2>
+    <p class="muted small">Sub fiecare căsuță de răspuns vei avea butoanele de mai jos. Încearcă: scrie <i>die Häuser</i>.</p>
+    <label class="f">Probă<input type="text" id="try-umlaut" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+    ${umlautBar('try-umlaut')}</section>
+  <section class="card"><h2>Aplicația</h2><p class="small muted">Versiunea ${APP_VERSION} · dispozitiv ${esc(deviceId())}</p>
+    <button class="btn" data-act="update">Caută actualizări</button></section>`;
+  return h;
+}
+function render() {
+  document.getElementById('conn').textContent = S.connected ? 'conectat' : (GH.token ? 'fără legătură' : 'neconectat');
+  document.getElementById('conn').classList.toggle('on', S.connected);
+  document.getElementById('tabs').innerHTML = TABS.map(t =>
+    `<button data-tab="${t.id}" class="${S.tab === t.id ? 'on' : ''}"><span class="ico">${esc(t.ico)}</span>${esc(t.name)}</button>`).join('');
+  const t = TABS.find(x => x.id === S.tab) || TABS[0];
+  document.getElementById('view').innerHTML = t.id === 'profil' ? viewProfil() : viewLesson(t);
+}
+
+/* ---------- events ---------- */
+document.addEventListener('mousedown', e => { if (e.target.closest('.umlauts button')) e.preventDefault(); }); // keep focus in the input
+document.addEventListener('click', async e => {
+  const u = e.target.closest('.umlauts button');
+  if (u) { const input = document.getElementById(u.parentElement.dataset.target); if (input) insertAtCursor(input, u.dataset.ch); return; }
+  const tab = e.target.closest('[data-tab]');
+  if (tab) { S.tab = tab.dataset.tab; S.msg = null; store.set('sdl-tab', S.tab); render(); window.scrollTo(0, 0); return; }
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  const act = b.dataset.act;
+  if (act === 'gh-save') {
+    GH.owner = document.getElementById('gh-owner').value.trim() || GH.owner;
+    GH.repo = document.getElementById('gh-repo').value.trim() || GH.repo;
+    const tok = document.getElementById('gh-token').value.trim();
+    if (tok) GH.token = tok;
+    store.set('sdl-gh', GH);
+    S.msg = { text: 'Verific legătura…' }; render();
+    await refresh();
+    if (S.connected) { S.msg = { text: 'Conectat. Repo-ul de date e vizibil.' }; render(); }
+  } else if (act === 'gh-forget') {
+    GH.token = ''; store.set('sdl-gh', GH); S.connected = false; S.counts = {}; S.msg = { text: 'Tokenul a fost șters de pe acest dispozitiv.' }; render();
+  } else if (act === 'gh-test') {
+    b.disabled = true; S.msg = { text: 'Fac un commit de test…' }; render();
+    try {
+      const body = JSON.stringify({ device: deviceId(), app: APP_VERSION, at: new Date().toISOString(), ua: navigator.userAgent.slice(0, 120) }, null, 2) + '\n';
+      const c = await commitFiles({ [`stare/conexiuni/${deviceId()}.json`]: body }, 'App: test conexiune');
+      S.msg = { text: `Scrierea merge. Commit ${esc(c.sha.slice(0, 7))} în ${esc(GH.repo)}.` };
+    } catch (err) { S.msg = { bad: true, text: errText(err) }; }
+    render();
+  } else if (act === 'update') {
+    const reg = await navigator.serviceWorker?.getRegistration();
+    if (reg) await reg.update();
+    location.reload();
+  }
+});
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+render();
+refresh();
+</script>
+</body>
+</html>
