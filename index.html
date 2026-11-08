@@ -181,7 +181,7 @@ details.grp summary { cursor: pointer; font-weight: 600; }
 <div class="tip" id="tip" hidden></div>
 
 <script>
-const APP_VERSION = 'v8';
+const APP_VERSION = 'v9';
 const TABS = [
   { id: 'artikel', ico: 'der', name: 'Artikel', title: 'Genul substantivelor',
     desc: 'Exersezi <span class="art der">der</span> / <span class="art die">die</span> / <span class="art das">das</span> pe cuvintele tale din Duolingo, cu regulile de terminație (-ung, -chen, -keit…).' },
@@ -189,12 +189,14 @@ const TABS = [
     desc: 'Scrii pluralul (<i>das Haus → die Häuser</i>) și exersezi Dativ plural cu -n (<i>mit den Kindern</i>).' },
   { id: 'adjektive', ico: '-en', name: 'Adjektive', title: 'Terminațiile adjectivelor',
     desc: 'Cele opt bucăți din Duolingo, puse la un loc ca un singur sistem: după der-cuvinte, după ein-cuvinte și fără articol, în toate cazurile.' },
+  { id: 'verben', ico: 'Vb', name: 'Verben', title: 'Conjugarea verbelor',
+    desc: 'Präsens (cu e→i, a→ä și verbe separabile), Perfekt (participiul și haben/sein), Präteritum, Futur cu <i>werden</i> și Imperativ, pe verbele tale din Duolingo.' },
   { id: 'kasus', ico: 'Dat', name: 'Kasus', title: 'Cazuri și prepoziții',
     desc: 'Articolul corect după prepoziție și Wechselpräpositionen: unde? (dativ) sau încotro? (acuzativ).' },
   { id: 'profil', ico: '⚙', name: 'Profil', title: 'Profil și conexiune', desc: '' }
 ];
 const LESSON_TABS = TABS.filter(t => t.id !== 'profil').map(t => t.id);
-const KIND = { articol: 'Articolul', plural: 'Pluralul', adjectiv: 'Terminația adjectivului', caz: 'Cazul după prepoziție', substantiv: 'Calibrare · articol și plural' };
+const KIND = { articol: 'Articolul', plural: 'Pluralul', adjectiv: 'Terminația adjectivului', caz: 'Cazul după prepoziție', verb: 'Verbul', substantiv: 'Calibrare · articol și plural' };
 
 /* ---------- storage + GitHub (same pattern as Summit Building) ---------- */
 const store = {
@@ -437,7 +439,7 @@ function check() {
   r.answers.push({ item: item.id, raspuns: given, corect: ok, ms: Date.now() - r.shown, incercare: r.retried.includes(r.pos) ? 2 : 1,
     traducereVazuta: r.roSeen, glosarVazut: r.glossSeen.slice() });
   // a wrong item comes back once at the end of the lesson
-  if (!ok && !r.retried.includes(r.pos)) { r.order.push(r.order[r.pos]); r.retried.push(r.order.length - 1); }
+  if (!ok && r.tab !== 'calibrare' && !r.retried.includes(r.pos)) { r.order.push(r.order[r.pos]); r.retried.push(r.order.length - 1); }
   saveRun(); render();
 }
 function next() {
@@ -454,13 +456,14 @@ async function saveResult() {
   const month = r.started.slice(0, 7);
   const result = { lectie: r.id, tab: r.tab, fisier: r.path, inceput: r.started, sfarsit: r.finished, dispozitiv: deviceId(), app: APP_VERSION,
     corecte: r.answers.filter(a => a.incercare === 1 && a.corect).length, total: data.itemi.length, raspunsuri: r.answers };
-  if (r.tab === 'calibrare') Object.assign(result, calStats(r.answers));
+  const nounCal = r.tab === 'calibrare' && data.itemi[0]?.tip === 'substantiv';
+  if (nounCal) Object.assign(result, calStats(r.answers));
   const files = {
     [`rezultate/${month}/${r.id}.json`]: JSON.stringify(result, null, 1) + '\n',
     [`lectii/arhiva/${month}/${r.id}.json`]: JSON.stringify(data, null, 1) + '\n',
     [r.path]: null
   };
-  QUEUE.push({ files, message: r.tab === 'calibrare'
+  QUEUE.push({ files, message: r.tab === 'calibrare' && !nounCal ? `App: calibrare ${r.id} (${result.corecte}/${result.total})` : nounCal
     ? `App: calibrare ${r.id} (articol ${result.articol.join('/')}, plural ${result.plural.join('/')}, ${result.necunoscute} necunoscute)`
     : `App: lecție ${r.tab} ${r.id} (${result.corecte}/${result.total})` });
   store.set('sdl-queue', QUEUE);
@@ -492,7 +495,7 @@ function quit() {
 function viewLesson(t) {
   const list = available(t.id);
   const n = list.length;
-  let h = (t.id === 'artikel' || t.id === 'plural') ? calCard(true) : '';
+  let h = calCard(true);
   h += `<section class="card"><h2>${esc(t.title)}</h2><p class="muted">${t.desc}</p>
     <div class="stat"><div><span class="muted small">Lecții pregătite</span><b>${n}</b></div>
       <div><span class="muted small">Durată</span><b>~5 min</b></div></div>
@@ -579,13 +582,13 @@ function calCard(compact) {
   if (!parts.length) return '';
   const d = LESSONS[parts[0]].data, n = d.itemi.length;
   return `<section class="card cal-card"><h2>Testul de calibrare</h2>
-    ${compact ? '' : `<p class="muted small">Pentru fiecare substantiv scrii articolul și pluralul, sau spui că nu-l cunoști. Rezultatul pune fiecare cuvânt în repetiția spațiată și arată primul profil: la ce reguli stai bine și unde greșești.</p>`}
-    <p class="small">${esc(d.titlu || d.id)} · ${n} cuvinte · ~5 min</p>
+    ${compact ? '' : `<p class="muted small">Un singur test pentru toate tipurile de lecții, în reprize de ~5 minute pe care le faci când vrei: substantive (articol + plural), terminațiile adjectivelor, cazul după prepoziții și verbele. Nu primești itemii greșiți din nou la final: testul măsoară. Rezultatul pune fiecare lucru în repetiția spațiată și arată primul profil.</p>`}
+    <p class="small">Urmează: <b>${esc(d.titlu || d.id)}</b> · ${n} ${d.itemi[0]?.tip === 'substantiv' ? 'cuvinte' : 'propoziții'} · ~5 min${parts.length > 1 ? ` · ${parts.length} reprize rămase` : ''}</p>
     <button class="btn primary" data-act="start" data-path="${esc(parts[0])}">Începe repriza</button></section>`;
 }
 function viewRun() {
   const r = S.run;
-  if (r.finished) return r.tab === 'calibrare' ? viewCalSummary() : viewSummary();
+  if (r.finished) return r.tab === 'calibrare' && runData()?.itemi[0]?.tip === 'substantiv' ? viewCalSummary() : viewSummary();
   const item = runItem();
   if (!item) return `<section class="card"><p>Lecția nu mai e pe dispozitiv.</p><button class="btn" data-act="quit">Înapoi</button></section>`;
   if (item.tip === 'substantiv') return viewCalItem(item);
@@ -596,7 +599,7 @@ function viewRun() {
   <section class="card item">
     <div class="kind">${esc(KIND[item.tip] || '')}${r.retried.includes(r.pos) ? ' · din nou' : ''}</div>
     <p class="sent">${sentenceHTML(item, st)} <button class="ro-btn" data-act="ro" title="Traducerea propoziției">RO</button></p>
-    ${item.indiciu ? `<div class="hint">${item.tip === 'adjectiv' ? 'Adjectivul' : 'Indiciu'}: <b>${esc(item.indiciu)}</b></div>` : ''}
+    ${item.indiciu ? `<div class="hint">${item.tip === 'adjectiv' ? 'Adjectivul' : item.tip === 'verb' ? 'Verbul' : 'Indiciu'}: <b>${esc(item.indiciu)}</b></div>` : ''}
     <p class="ro-line" id="ro-line" ${r.roSeen || st ? '' : 'hidden'}>${esc(item.traducere)}</p>`;
   if (!st) {
     h += `<form class="answer" data-act="check" autocomplete="off"><input id="ans" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="Răspunsul tău"><button class="btn primary">Verifică</button></form>
@@ -616,7 +619,7 @@ function viewSummary() {
   const good = first.filter(a => a.corect).length;
   const wrongIds = [...new Set(first.filter(a => !a.corect).map(a => a.item))];
   const byId = Object.fromEntries(data.itemi.map(i => [i.id, i]));
-  let h = `<section class="card"><h2>Lecție terminată</h2>
+  let h = `<section class="card"><h2>${r.tab === 'calibrare' ? esc(data.titlu || 'Calibrare') + ' — gata' : 'Lecție terminată'}</h2>
     <div class="row between"><div><div class="big-score">${good}/${first.length}</div><div class="muted small">corecte din prima</div></div></div>`;
   if (wrongIds.length) {
     h += `<h2 style="margin-top:18px">De reținut</h2><ul class="sum-list">` + wrongIds.map(id => {
@@ -657,8 +660,9 @@ function profileHTML() {
 
   const c = p.calibrare;
   if (c && c.facute) h += `<section class="card"><h2>Calibrare</h2>
-    <div class="stat"><div><span class="muted small">Articol</span><b>${pct(c.articol[0], c.articol[1])}</b><span class="small muted">${c.articol[0]}/${c.articol[1]}</span></div>
-      <div><span class="muted small">Plural</span><b>${pct(c.plural[0], c.plural[1])}</b><span class="small muted">${c.plural[0]}/${c.plural[1]}</span></div>
+    <div class="stat">${c.articol[1] ? `<div><span class="muted small">Articol</span><b>${pct(c.articol[0], c.articol[1])}</b><span class="small muted">${c.articol[0]}/${c.articol[1]}</span></div>
+      <div><span class="muted small">Plural</span><b>${pct(c.plural[0], c.plural[1])}</b><span class="small muted">${c.plural[0]}/${c.plural[1]}</span></div>` : ''}
+      ${c.propozitii?.[1] ? `<div><span class="muted small">Propoziții</span><b>${pct(c.propozitii[0], c.propozitii[1])}</b><span class="small muted">${c.propozitii[0]}/${c.propozitii[1]}</span></div>` : ''}
       <div><span class="muted small">Reprize</span><b>${c.facute}/${c.parti}</b></div></div>
     ${c.necunoscute?.length ? `<details class="small"><summary>Cuvinte pe care nu le cunoșteai (${c.necunoscute.length})</summary>${chips(c.necunoscute)}</details>` : ''}</section>`;
 
