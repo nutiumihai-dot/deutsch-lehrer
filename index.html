@@ -188,7 +188,7 @@ details.grp summary { cursor: pointer; font-weight: 600; }
 <div class="tip" id="tip" hidden></div>
 
 <script>
-const APP_VERSION = 'v12';
+const APP_VERSION = 'v13';
 const TABS = [
   { id: 'artikel', ico: 'der', name: 'Artikel', title: 'Genul substantivelor',
     desc: 'Exersezi <span class="art der">der</span> / <span class="art die">die</span> / <span class="art das">das</span> pe cuvintele tale din Duolingo, cu regulile de terminație (-ung, -chen, -keit…).' },
@@ -199,7 +199,7 @@ const TABS = [
   { id: 'verben', ico: 'Vb', name: 'Verben', title: 'Conjugarea verbelor',
     desc: 'Präsens (cu e→i, a→ä și verbe separabile), Perfekt (participiul și haben/sein), Präteritum, Futur cu <i>werden</i>, Imperativ și, de B1, Konjunktiv II (<i>würde</i>, <i>wäre</i>, <i>hätte</i>, <i>hätte gemacht</i>), Plusquamperfekt, Perfektul modalelor (<i>habe arbeiten müssen</i>) și pasivul (<i>wird gemacht</i>, <i>ist gemacht worden</i>), pe verbele tale din Duolingo.' },
   { id: 'kasus', ico: 'Dat', name: 'Kasus', title: 'Cazuri și prepoziții',
-    desc: 'Articolul corect după prepoziție și Wechselpräpositionen: unde? (dativ) sau încotro? (acuzativ). Genitivul (<i>wegen des Regens</i>, <i>das Auto meines Vaters</i>, <i>des Hauses</i>) și n-Deklination (<i>den Kollegen</i>, <i>dem Jungen</i>, <i>des Namens</i>).' },
+    desc: 'Articolul corect după prepoziție și Wechselpräpositionen: unde? (dativ) sau încotro? (acuzativ). Genitivul (<i>wegen des Regens</i>, <i>das Auto meines Vaters</i>, <i>des Hauses</i>) și n-Deklination (<i>den Kollegen</i>, <i>dem Jungen</i>, <i>des Namens</i>). Verbele cu prepoziție fixă (<i>warten auf</i>, <i>teilnehmen an</i>, <i>stolz auf</i>), da-/wo-compusele (<i>darauf</i>, <i>worüber</i>; pentru persoane <i>auf ihn</i>, <i>mit wem</i>) și contracțiile (<i>am</i>, <i>im</i>, <i>ins</i>, <i>zum</i>, <i>zur</i>, <i>vom</i>, <i>beim</i>).' },
   { id: 'pronomen', ico: 'mir', name: 'Pronomen', title: 'Pronumele',
     desc: 'Pronume personale la acuzativ și dativ (<i>ihn/ihm</i>, <i>sie/ihr</i>, <i>ihnen/Ihnen</i>), reflexive (<i>ich freue mich</i>, <i>ich wasche mir die Hände</i>) și relative (<i>der Mann, dem ich helfe</i>; <i>denen</i>, <i>dessen</i>, <i>deren</i>).' },
   { id: 'profil', ico: '⚙', name: 'Profil', title: 'Profil și conexiune', desc: '' }
@@ -212,9 +212,12 @@ const kindOf = item => {
   if (item.tip === 'caz' && v.caz === 'gen' && !v.prepozitie) return 'Genitivul';
   if (item.tip === 'declinare') return v.caz === 'gen' ? 'Substantivul la genitiv' : 'n-Deklination';
   if (item.tip === 'comparatie') return v.grad === 'sup' ? 'Superlativul' : 'Comparativul';
+  if (item.tip === 'regim') return v.parte === 'art' ? 'Cazul cerut de verb / adjectiv' : 'Prepoziția fixă';
   return KIND[item.tip] || '';
 };
-const KIND = { articol: 'Articolul', plural: 'Pluralul', adjectiv: 'Terminația adjectivului', caz: 'Cazul după prepoziție', verb: 'Verbul', pronume: 'Pronumele', substantiv: 'Calibrare · articol și plural' };
+// woda: one neutral label for da-/wo- compounds and the person forms, so the label doesn't give the answer away
+const KIND = { articol: 'Articolul', plural: 'Pluralul', adjectiv: 'Terminația adjectivului', caz: 'Cazul după prepoziție', verb: 'Verbul', pronume: 'Pronumele',
+  woda: 'Lucru sau persoană? (darauf / auf ihn)', contractie: 'Prepoziție + articol, într-un cuvânt', substantiv: 'Calibrare · articol și plural' };
 
 /* ---------- storage + GitHub (same pattern as Summit Building) ---------- */
 const store = {
@@ -617,7 +620,7 @@ function viewRun() {
   <section class="card item">
     <div class="kind">${esc(kindOf(item))}${r.retried.includes(r.pos) ? ' · din nou' : ''}</div>
     <p class="sent">${sentenceHTML(item, st)} <button class="ro-btn" data-act="ro" title="Traducerea propoziției">RO</button></p>
-    ${item.indiciu ? `<div class="hint">${item.tip === 'adjectiv' || item.tip === 'comparatie' ? 'Adjectivul' : item.tip === 'verb' ? 'Verbul' : item.tip === 'pronume' ? 'Pronumele' : item.tip === 'declinare' ? 'Substantivul' : 'Indiciu'}: <b>${esc(item.indiciu)}</b></div>` : ''}
+    ${item.indiciu ? `<div class="hint">${item.tip === 'adjectiv' || item.tip === 'comparatie' ? 'Adjectivul' : item.tip === 'verb' ? 'Verbul' : item.tip === 'pronume' ? 'Pronumele' : item.tip === 'declinare' ? 'Substantivul' : item.tip === 'contractie' ? 'Prepoziția' : item.tip === 'woda' && item.verificare?.forma === 'pers' ? 'Persoana' : item.tip === 'regim' && item.verificare?.parte === 'prep' ? 'Sensul' : 'Indiciu'}: <b>${esc(item.indiciu)}</b></div>` : ''}
     <p class="ro-line" id="ro-line" ${r.roSeen || st ? '' : 'hidden'}>${esc(item.traducere)}</p>`;
   if (!st) {
     h += `<form class="answer" data-act="check" autocomplete="off"><input id="ans" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="Răspunsul tău"><button class="btn primary">Verifică</button></form>
