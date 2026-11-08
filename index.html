@@ -143,7 +143,7 @@ a { color: var(--der); }
 <div class="tip" id="tip" hidden></div>
 
 <script>
-const APP_VERSION = 'v4';
+const APP_VERSION = 'v5';
 const TABS = [
   { id: 'artikel', ico: 'der', name: 'Artikel', title: 'Genul substantivelor',
     desc: 'Exersezi <span class="art der">der</span> / <span class="art die">die</span> / <span class="art das">das</span> pe cuvintele tale din Duolingo, cu regulile de terminație (-ung, -chen, -keit…).' },
@@ -334,12 +334,14 @@ function sentenceHTML(item, state) {
 function startLesson(path) {
   const data = LESSONS[path]?.data;
   if (!data) return;
-  S.run = { path, id: data.id, tab: data.tab, titlu: data.titlu || '', order: data.itemi.map((_, i) => i), pos: 0,
+  // the run keeps its own copy: the generator may replace the buffered file while the lesson is in progress
+  S.run = { path, data, id: data.id, tab: data.tab, titlu: data.titlu || '', order: data.itemi.map((_, i) => i), pos: 0,
     answers: [], retried: [], state: null, started: new Date().toISOString(), shown: Date.now(), roSeen: false, glossSeen: [] };
   saveRun(); render();
 }
 function saveRun() { store.set('sdl-run', S.run); }
-const runItem = () => LESSONS[S.run.path]?.data.itemi[S.run.order[S.run.pos]];
+const runData = () => S.run.data || LESSONS[S.run.path]?.data;
+const runItem = () => runData()?.itemi[S.run.order[S.run.pos]];
 function normalize(s) { return s.trim().replace(/\s+/g, ' '); }
 function check() {
   const input = document.getElementById('ans');
@@ -367,7 +369,7 @@ function next() {
 async function saveResult() {
   const r = S.run;
   if (r.saved) return;
-  const data = LESSONS[r.path].data;
+  const data = runData();
   const month = r.started.slice(0, 7);
   const result = { lectie: r.id, tab: r.tab, fisier: r.path, inceput: r.started, sfarsit: r.finished, dispozitiv: deviceId(), app: APP_VERSION,
     corecte: r.answers.filter(a => a.incercare === 1 && a.corect).length, total: data.itemi.length, raspunsuri: r.answers };
@@ -437,7 +439,7 @@ function viewRun() {
   return h + '</section>';
 }
 function viewSummary() {
-  const r = S.run, data = LESSONS[r.path]?.data || { itemi: [] };
+  const r = S.run, data = runData() || { itemi: [] };
   const first = r.answers.filter(a => a.incercare === 1);
   const good = first.filter(a => a.corect).length;
   const wrongIds = [...new Set(first.filter(a => !a.corect).map(a => a.item))];
