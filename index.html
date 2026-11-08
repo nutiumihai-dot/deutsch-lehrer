@@ -130,6 +130,44 @@ a { color: var(--der); }
 .sum-list li { padding: 10px 0; border-top: 1px solid var(--line); }
 .sum-list .s { font-size: 16px; }
 .big-score { font-size: 44px; font-weight: 800; line-height: 1; }
+
+/* ---------- calibration ---------- */
+.cal-card { border-left: 4px solid var(--der); }
+.cal-arts { display: flex; gap: 8px; margin-top: 18px; }
+.cal-art { flex: 1; max-width: 120px; padding: 12px 0; font: inherit; font-size: 19px; font-weight: 700; border-radius: 12px; cursor: pointer;
+  background: var(--surface); border: 2px solid var(--line); }
+.cal-art.der { color: var(--der); } .cal-art.die { color: var(--die); } .cal-art.das { color: var(--das); }
+.cal-art.der.on { background: var(--der-soft); border-color: var(--der); }
+.cal-art.die.on { background: var(--die-soft); border-color: var(--die); }
+.cal-art.das.on { background: var(--das-soft); border-color: var(--das); }
+.cal-pl { align-items: center; }
+.pl-die { font-size: 20px; color: var(--muted); }
+.ok-txt { color: var(--ok); } .bad-txt { color: var(--bad); }
+.fb s { color: var(--muted); }
+
+/* ---------- profile ---------- */
+.sub-h { font-size: 14px; margin: 18px 0 4px; color: var(--muted); font-weight: 600; }
+.settings-h { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 28px 2px 0; }
+.meters { list-style: none; padding: 0; margin: 8px 0 0; }
+.meters li { display: grid; grid-template-columns: minmax(0, 1fr) 90px 48px; gap: 10px; align-items: center; padding: 5px 0; font-size: 14px; }
+.m-label { overflow-wrap: anywhere; }
+.meter { height: 8px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }
+.meter i { display: block; height: 100%; border-radius: 99px; }
+.meter i.hi { background: var(--ok); } .meter i.mid { background: var(--warn); } .meter i.lo { background: var(--bad); }
+.m-val { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 13px; }
+.boxes { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 12px; }
+.box { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.box-n { font-weight: 700; font-variant-numeric: tabular-nums; }
+.box-bar { width: 100%; max-width: 44px; height: 70px; background: var(--surface-2); border-radius: 8px; display: flex; align-items: flex-end; overflow: hidden; }
+.box-bar i { display: block; width: 100%; background: var(--der); border-radius: 8px 8px 0 0; }
+.box:last-child .box-bar i { background: var(--ok); }
+.box-l { font-size: 12px; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chip2 { font-size: 13px; padding: 3px 9px; border-radius: 99px; background: var(--surface-2); }
+.chip2.lo { background: var(--die-soft); } .chip2.hi { background: var(--das-soft); }
+details.grp { border-top: 1px solid var(--line); padding: 8px 0; }
+details.grp summary { cursor: pointer; font-weight: 600; }
+.stat div span.small { display: block; }
 </style>
 </head>
 <body>
@@ -143,7 +181,7 @@ a { color: var(--der); }
 <div class="tip" id="tip" hidden></div>
 
 <script>
-const APP_VERSION = 'v7';
+const APP_VERSION = 'v8';
 const TABS = [
   { id: 'artikel', ico: 'der', name: 'Artikel', title: 'Genul substantivelor',
     desc: 'Exersezi <span class="art der">der</span> / <span class="art die">die</span> / <span class="art das">das</span> pe cuvintele tale din Duolingo, cu regulile de terminație (-ung, -chen, -keit…).' },
@@ -156,7 +194,7 @@ const TABS = [
   { id: 'profil', ico: '⚙', name: 'Profil', title: 'Profil și conexiune', desc: '' }
 ];
 const LESSON_TABS = TABS.filter(t => t.id !== 'profil').map(t => t.id);
-const KIND = { articol: 'Articolul', plural: 'Pluralul', adjectiv: 'Terminația adjectivului', caz: 'Cazul după prepoziție' };
+const KIND = { articol: 'Articolul', plural: 'Pluralul', adjectiv: 'Terminația adjectivului', caz: 'Cazul după prepoziție', substantiv: 'Calibrare · articol și plural' };
 
 /* ---------- storage + GitHub (same pattern as Summit Building) ---------- */
 const store = {
@@ -170,6 +208,7 @@ const GH = store.get('sdl-gh', null) || { owner: 'nutiumihai-dot', repo: 'deutsc
 let LESSONS = store.get('sdl-lessons', {});
 let DONE = store.get('sdl-done', []);
 let QUEUE = store.get('sdl-queue', []);
+let PROFIL = store.get('sdl-profil', null);  // {sha, data} of progres/profil.json
 const S = { tab: store.get('sdl-tab', 'artikel'), connected: false, syncing: false, msg: null, run: store.get('sdl-run', null) };
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -241,7 +280,8 @@ async function pullLessons() {
   const ref = await ghJson(`/git/ref/heads/${GH.branch}`);
   const commit = await ghJson(`/git/commits/${ref.object.sha}`);
   const tree = await ghJson(`/git/trees/${commit.tree.sha}?recursive=1`);
-  const remote = tree.tree.filter(x => x.type === 'blob' && /^lectii\/pregatite\/[^/]+\/[^/]+\.json$/.test(x.path));
+  // prepared lessons + the calibration sittings (calibrare/cal-N.json) use the same player and the same commit
+  const remote = tree.tree.filter(x => x.type === 'blob' && /^(lectii\/pregatite\/[^/]+|calibrare)\/[^/]+\.json$/.test(x.path));
   const next = {};
   for (const f of remote) {
     if (LESSONS[f.path]?.sha === f.sha) { next[f.path] = LESSONS[f.path]; continue; }
@@ -250,6 +290,11 @@ async function pullLessons() {
   }
   LESSONS = next;
   store.set('sdl-lessons', LESSONS);
+  // the Profil page: precomputed by progres.py on the PC each time the generator runs
+  const prof = tree.tree.find(x => x.path === 'progres/profil.json');
+  if (prof && PROFIL?.sha !== prof.sha) {
+    try { PROFIL = { sha: prof.sha, data: JSON.parse(dec((await ghJson(`/git/blobs/${prof.sha}`)).content)) }; store.set('sdl-profil', PROFIL); } catch (e) { /* keep the old one */ }
+  }
   // a finished lesson stays hidden until the generator removes it from the buffer
   DONE = DONE.filter(p => LESSONS[p]);
   store.set('sdl-done', DONE);
@@ -293,6 +338,8 @@ document.addEventListener('visibilitychange', () => {
 function available(tab) {
   return Object.keys(LESSONS).filter(p => p.startsWith(`lectii/pregatite/${tab}/`) && !DONE.includes(p)).sort();
 }
+const calParts = () => Object.keys(LESSONS).filter(p => p.startsWith('calibrare/') && !DONE.includes(p))
+  .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
 /* ---------- German letters under any answer box ---------- */
 function umlautBar(target) {
@@ -356,7 +403,28 @@ function saveRun() { store.set('sdl-run', S.run); }
 const runData = () => S.run.data || LESSONS[S.run.path]?.data;
 const runItem = () => runData()?.itemi[S.run.order[S.run.pos]];
 function normalize(s) { return s.trim().replace(/\s+/g, ' '); }
+/* calibration: one noun per screen, article (der/die/das buttons) + plural, or "nu cunosc"; no retries, it measures */
+const deAscii = s => s.replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/Ä/g, 'Ae').replace(/Ö/g, 'Oe').replace(/Ü/g, 'Ue').replace(/ß/g, 'ss');
+function checkCal(unknown) {
+  const r = S.run, item = runItem();
+  if (unknown) {
+    r.state = { unknown: true };
+    r.answers.push({ item: item.id, necunoscut: true, corect: false, ms: Date.now() - r.shown, incercare: 1, traducereVazuta: r.roSeen });
+    saveRun(); render(); return;
+  }
+  const input = document.getElementById('ans');
+  if (!r.pick) { document.getElementById('cal-need')?.removeAttribute('hidden'); return; }
+  const given = normalize(input?.value || '').replace(/^die\s+/i, '');
+  if (!given) { input?.focus(); return; }
+  const artOk = r.pick === item.articol, plOk = item.plural.includes(given);
+  const near = !plOk && item.plural.some(p => p.toLowerCase() === given.toLowerCase() || deAscii(p) === given || p.normalize('NFD').replace(/[̈]/g, '') === given);
+  r.state = { pick: r.pick, given, artOk, plOk, near };
+  r.answers.push({ item: item.id, articol: r.pick, plural: given, corectArticol: artOk, corectPlural: plOk, corect: artOk && plOk,
+    ms: Date.now() - r.shown, incercare: 1, traducereVazuta: r.roSeen });
+  saveRun(); render();
+}
 function check() {
+  if (runItem()?.tip === 'substantiv') return checkCal(false);
   const input = document.getElementById('ans');
   const given = normalize(input?.value || '');
   if (!given) { input?.focus(); return; }
@@ -374,7 +442,7 @@ function check() {
 }
 function next() {
   const r = S.run;
-  r.pos++; r.state = null; r.shown = Date.now(); r.roSeen = false; r.glossSeen = [];
+  r.pos++; r.state = null; r.pick = null; r.shown = Date.now(); r.roSeen = false; r.glossSeen = [];
   if (r.pos >= r.order.length) r.finished = new Date().toISOString();
   saveRun(); render();
   if (r.finished) saveResult();
@@ -386,12 +454,15 @@ async function saveResult() {
   const month = r.started.slice(0, 7);
   const result = { lectie: r.id, tab: r.tab, fisier: r.path, inceput: r.started, sfarsit: r.finished, dispozitiv: deviceId(), app: APP_VERSION,
     corecte: r.answers.filter(a => a.incercare === 1 && a.corect).length, total: data.itemi.length, raspunsuri: r.answers };
+  if (r.tab === 'calibrare') Object.assign(result, calStats(r.answers));
   const files = {
     [`rezultate/${month}/${r.id}.json`]: JSON.stringify(result, null, 1) + '\n',
     [`lectii/arhiva/${month}/${r.id}.json`]: JSON.stringify(data, null, 1) + '\n',
     [r.path]: null
   };
-  QUEUE.push({ files, message: `App: lecție ${r.tab} ${r.id} (${result.corecte}/${result.total})` });
+  QUEUE.push({ files, message: r.tab === 'calibrare'
+    ? `App: calibrare ${r.id} (articol ${result.articol.join('/')}, plural ${result.plural.join('/')}, ${result.necunoscute} necunoscute)`
+    : `App: lecție ${r.tab} ${r.id} (${result.corecte}/${result.total})` });
   store.set('sdl-queue', QUEUE);
   if (!DONE.includes(r.path)) DONE.push(r.path);
   store.set('sdl-done', DONE);
@@ -421,7 +492,8 @@ function quit() {
 function viewLesson(t) {
   const list = available(t.id);
   const n = list.length;
-  let h = `<section class="card"><h2>${esc(t.title)}</h2><p class="muted">${t.desc}</p>
+  let h = (t.id === 'artikel' || t.id === 'plural') ? calCard(true) : '';
+  h += `<section class="card"><h2>${esc(t.title)}</h2><p class="muted">${t.desc}</p>
     <div class="stat"><div><span class="muted small">Lecții pregătite</span><b>${n}</b></div>
       <div><span class="muted small">Durată</span><b>~5 min</b></div></div>
     <button class="btn primary big" data-act="start" data-path="${esc(list[0] || '')}" ${n ? '' : 'disabled'}>Lecție nouă</button>`;
@@ -437,11 +509,86 @@ function viewLesson(t) {
   if (INSTALL) h += installCard();
   return h;
 }
+function calStats(answers) {
+  const known = answers.filter(a => !a.necunoscut);
+  return { articol: [known.filter(a => a.corectArticol).length, known.length], plural: [known.filter(a => a.corectPlural).length, known.length],
+    necunoscute: answers.length - known.length };
+}
+function viewCalItem(item) {
+  const r = S.run, st = r.state;
+  const total = r.order.length, pct = Math.round(100 * r.pos / total);
+  let h = `<div class="ltop"><button class="btn ghost" data-act="quit" title="Ieși din calibrare">✕</button><div class="bar"><i style="width:${pct}%"></i></div>
+    <span class="small muted">${r.pos + 1}/${total}</span></div>
+  <section class="card item">
+    <div class="kind">${esc(KIND.substantiv)}</div>
+    <p class="sent"><span class="gap">${st && !st.unknown ? `<span class="art ${esc(item.articol)}">${esc(item.articol)}</span>` : '&nbsp;'}</span> <b>${esc(item.substantiv)}</b>
+      <button class="ro-btn" data-act="ro" title="Traducerea cuvântului">RO</button></p>
+    <p class="ro-line" id="ro-line" ${r.roSeen || st ? '' : 'hidden'}>${esc(item.ro)}</p>`;
+  if (!st) {
+    h += `<div class="cal-arts" role="group" aria-label="Articolul">${['der', 'die', 'das'].map(a =>
+        `<button type="button" class="cal-art ${a}${r.pick === a ? ' on' : ''}" data-act="cal-art" data-art="${a}">${a}</button>`).join('')}</div>
+      <p class="small bad-txt" id="cal-need" hidden>Alege întâi articolul.</p>
+      <form class="answer cal-pl" data-act="check" autocomplete="off"><span class="pl-die">die</span><input id="ans" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" placeholder="pluralul"><button class="btn primary">Verifică</button></form>
+      ${umlautBar('ans')}
+      <div class="row" style="margin-top:12px"><button class="btn ghost" data-act="cal-unknown">Nu cunosc cuvântul</button></div>`;
+  } else {
+    const ok = !st.unknown && st.artOk && st.plOk;
+    const line = (good, given, right) => good ? `<b class="ok-txt">✔</b> ${right}` : `<b class="bad-txt">✘</b> <s>${esc(given)}</s> → ${right}`;
+    h += `<div class="fb ${st.unknown ? '' : ok ? 'ok' : 'bad'}">`;
+    if (st.unknown) h += `<h3>Cuvânt nou: ${esc(item.articol)} ${esc(item.substantiv)}, die ${esc(item.plural[0])}</h3><p class="small muted">Nu intră acum în repetiții; îl vei întâlni în lecții.</p>`;
+    else h += `<h3>${ok ? '✔ Corect' : st.artOk || st.plOk ? 'Pe jumătate' : '✘ Greșit'}</h3>
+      <p>${line(st.artOk, st.pick, `<span class="art ${esc(item.articol)}">${esc(item.articol)}</span> ${esc(item.substantiv)}`)}</p>
+      <p>${line(st.plOk, 'die ' + st.given, 'die ' + esc(item.plural[0]))}${!st.plOk && st.near ? ' <span class="small">(aproape: ä/ö/ü/ß sau majuscula)</span>' : ''}</p>`;
+    h += `<p>${md(item.explicatie)}</p></div>
+      <div class="row" style="margin-top:14px"><button class="btn primary big" data-act="next" id="next-btn">Continuă</button></div>`;
+  }
+  return h + '</section>';
+}
+function viewCalSummary() {
+  const r = S.run, data = runData() || { itemi: [] };
+  const byId = Object.fromEntries(data.itemi.map(i => [i.id, i]));
+  const s = calStats(r.answers);
+  // per rule / plural pattern, so the first profile is visible right away (the full one comes from the PC)
+  const cat = (key, okKey) => {
+    const m = {};
+    r.answers.filter(a => !a.necunoscut).forEach(a => { const it = byId[a.item]; if (!it) return;
+      const k = key === 'regula' ? (it.exceptie ? 'excepții de la reguli' : it.regula.replace(/^compus:.*/, 'compuse: genul ultimului cuvânt')) : 'plural ' + it.tipar;
+      (m[k] ||= [0, 0]); m[k][0] += a[okKey] ? 1 : 0; m[k][1]++; });
+    return Object.entries(m).sort((a, b) => a[1][0] / a[1][1] - b[1][0] / b[1][1] || b[1][1] - a[1][1]);
+  };
+  const left = calParts().length;
+  const list = rows => `<ul class="meters">${rows.map(([k, [c, t]]) => meterRow(k, c, t)).join('')}</ul>`;
+  let h = `<section class="card"><h2>${esc(data.titlu || 'Calibrare')} — gata</h2>
+    <div class="stat"><div><span class="muted small">Articol</span><b>${s.articol[0]}/${s.articol[1]}</b></div>
+      <div><span class="muted small">Plural</span><b>${s.plural[0]}/${s.plural[1]}</b></div>
+      <div><span class="muted small">Necunoscute</span><b>${s.necunoscute}</b></div></div>
+    <h3 class="sub-h">Genul, pe reguli</h3>${list(cat('regula', 'corectArticol'))}
+    <h3 class="sub-h">Pluralul, pe tipare</h3>${list(cat('tipar', 'corectPlural'))}
+    <p class="small muted">${left ? `Mai ai ${left === 1 ? 'o repriză' : left + ' reprize'}; le faci când vrei.` : 'Ai terminat toate reprizele.'}
+      Profilul complet apare în Profil după ce generatorul de pe PC procesează rezultatul (00:00, 09:00, 15:00), iar cuvintele greșite intră în repetiții.</p>
+    <p class="small muted">${r.synced ? '✔ Rezultatul e salvat în repo-ul de date.' : r.syncErr ? (r.syncErr === 'offline' ? '⏳ Ești offline: rezultatul e păstrat pe dispozitiv și se trimite singur mai târziu.' : '⚠ ' + r.syncErr + ' Rezultatul rămâne pe dispozitiv.') : 'Salvez rezultatul…'}</p>
+    <button class="btn primary big" data-act="quit">Gata</button></section>`;
+  return h;
+}
+function meterRow(label, c, t) {
+  const p = t ? Math.round(100 * c / t) : 0;
+  return `<li><span class="m-label">${esc(label)}</span><span class="meter"><i class="${p >= 80 ? 'hi' : p >= 50 ? 'mid' : 'lo'}" style="width:${p}%"></i></span><span class="m-val">${c}/${t}</span></li>`;
+}
+function calCard(compact) {
+  const parts = calParts();
+  if (!parts.length) return '';
+  const d = LESSONS[parts[0]].data, n = d.itemi.length;
+  return `<section class="card cal-card"><h2>Testul de calibrare</h2>
+    ${compact ? '' : `<p class="muted small">Pentru fiecare substantiv scrii articolul și pluralul, sau spui că nu-l cunoști. Rezultatul pune fiecare cuvânt în repetiția spațiată și arată primul profil: la ce reguli stai bine și unde greșești.</p>`}
+    <p class="small">${esc(d.titlu || d.id)} · ${n} cuvinte · ~5 min</p>
+    <button class="btn primary" data-act="start" data-path="${esc(parts[0])}">Începe repriza</button></section>`;
+}
 function viewRun() {
   const r = S.run;
-  if (r.finished) return viewSummary();
+  if (r.finished) return r.tab === 'calibrare' ? viewCalSummary() : viewSummary();
   const item = runItem();
   if (!item) return `<section class="card"><p>Lecția nu mai e pe dispozitiv.</p><button class="btn" data-act="quit">Înapoi</button></section>`;
+  if (item.tip === 'substantiv') return viewCalItem(item);
   const total = r.order.length, pct = Math.round(100 * r.pos / total);
   const st = r.state;
   let h = `<div class="ltop"><button class="btn ghost" data-act="quit" title="Ieși din lecție">✕</button><div class="bar"><i style="width:${pct}%"></i></div>
@@ -481,8 +628,50 @@ function viewSummary() {
     <button class="btn primary big" data-act="quit">Gata</button></section>`;
   return h;
 }
+const pct = (c, t) => t ? Math.round(100 * c / t) + '%' : '—';
+function profileHTML() {
+  const p = PROFIL?.data;
+  if (!p) return `<section class="card"><h2>Profilul tău</h2><p class="muted small">${GH.token
+    ? 'Profilul apare după testul de calibrare sau după primele lecții, când generatorul de pe PC procesează rezultatele.'
+    : 'Conectează aplicația la repo-ul de date (mai jos) ca să vezi profilul.'}</p></section>`;
+  const meters = rows => `<ul class="meters">${rows.map(r => meterRow(r.nume, r.corecte, r.total)).join('')}</ul>`;
+  const chips = (xs, cls = '') => `<div class="chips">${xs.map(x => `<span class="chip2 ${cls}">${esc(x)}</span>`).join('')}</div>`;
+  const upd = new Date(p.actualizat);
+  let h = `<section class="card"><div class="row between"><h2>Profilul tău</h2><span class="small muted">actualizat ${esc(isNaN(upd) ? p.actualizat : upd.toLocaleString('ro-RO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }))}</span></div>
+    <p class="muted small">Corecte din prima încercare, pe tot ce ai făcut până acum (lecții și calibrare).</p>
+    ${p.taburi?.length ? meters(p.taburi) : '<p class="small muted">Încă niciun răspuns procesat.</p>'}</section>`;
+
+  h += `<section class="card"><h2>Unde greșești des</h2>
+    ${p.slabe?.length ? meters(p.slabe) + '<p class="small muted">Generatorul pune accent pe acestea în lecțiile următoare.</p>'
+      : '<p class="small muted">Nimic clar încă: e nevoie de cel puțin 3 răspunsuri pe aceeași regulă.</p>'}
+    ${p.sigure?.length ? `<h3 class="sub-h">Ce merge bine</h3>${meters(p.sigure)}` : ''}</section>`;
+
+  const s = p.srs || { cutii: [0, 0, 0, 0, 0], total: 0, scadente: 0 };
+  const max = Math.max(1, ...s.cutii);
+  const lbl = ['1 zi', '3 zile', '7 zile', '14 zile', 'fixat'];
+  h += `<section class="card"><h2>Repetiția spațiată</h2>
+    <p class="muted small">${s.total} lucruri urmărite (genul sau pluralul unui cuvânt, un tipar de terminație, o prepoziție). Un răspuns corect le mută o cutie la dreapta; unul greșit, înapoi în prima.${s.scadente ? ` <b>${s.scadente}</b> sunt la scadență și intră în lecțiile următoare.` : ''}</p>
+    <div class="boxes">${s.cutii.map((n, i) => `<div class="box"><span class="box-n">${n}</span><span class="box-bar"><i style="height:${Math.round(100 * n / max)}%"></i></span><span class="box-l">${lbl[i]}</span></div>`).join('')}</div>
+    ${p.de_lucrat?.length ? `<h3 class="sub-h">De lucrat (cutia 1)</h3>${chips(p.de_lucrat, 'lo')}` : ''}
+    ${p.fixate?.length ? `<h3 class="sub-h">Fixate</h3>${chips(p.fixate, 'hi')}` : ''}</section>`;
+
+  const c = p.calibrare;
+  if (c && c.facute) h += `<section class="card"><h2>Calibrare</h2>
+    <div class="stat"><div><span class="muted small">Articol</span><b>${pct(c.articol[0], c.articol[1])}</b><span class="small muted">${c.articol[0]}/${c.articol[1]}</span></div>
+      <div><span class="muted small">Plural</span><b>${pct(c.plural[0], c.plural[1])}</b><span class="small muted">${c.plural[0]}/${c.plural[1]}</span></div>
+      <div><span class="muted small">Reprize</span><b>${c.facute}/${c.parti}</b></div></div>
+    ${c.necunoscute?.length ? `<details class="small"><summary>Cuvinte pe care nu le cunoșteai (${c.necunoscute.length})</summary>${chips(c.necunoscute)}</details>` : ''}</section>`;
+
+  if (p.recente?.length) h += `<section class="card"><h2>Greșeli recente</h2><ul class="sum-list">${p.recente.map(g =>
+    `<li><div class="s">${esc(g.text)}</div><div class="small muted">ai scris <s>${esc(g.raspuns || '—')}</s>, corect: <b>${esc(g.corect)}</b> · ${esc(g.data)}</div></li>`).join('')}</ul></section>`;
+
+  if (p.grupuri?.length) h += `<section class="card"><h2>Toate regulile</h2>${p.grupuri.map(g =>
+    `<details class="grp"><summary>${esc(g.nume)} <span class="small muted">(${g.etichete.length})</span></summary>${meters(g.etichete)}</details>`).join('')}</section>`;
+  return h;
+}
 function viewProfil() {
-  return `<section class="card"><h2>Conexiunea cu datele</h2>
+  return `${calCard(false)}${profileHTML()}<h2 class="settings-h">Setări</h2>
+  <section class="card"><h2>Conexiunea cu datele</h2>
     <p class="muted small">Lecțiile și rezultatele stau în repo-ul tău privat de pe GitHub. Tokenul rămâne doar pe acest dispozitiv.</p>
     <div class="grid2">
       <label class="f">Utilizator GitHub<input type="text" id="gh-owner" value="${esc(GH.owner)}" autocomplete="off"></label>
@@ -560,6 +749,13 @@ document.addEventListener('click', async e => {
   if (!b || b.tagName === 'FORM') return;
   const act = b.dataset.act;
   if (act === 'start') startLesson(b.dataset.path);
+  else if (act === 'cal-art') {  // no re-render: it would wipe what is already typed in the plural box
+    S.run.pick = b.dataset.art; saveRun();
+    document.querySelectorAll('.cal-art').forEach(x => x.classList.toggle('on', x === b));
+    document.getElementById('cal-need')?.setAttribute('hidden', '');
+    document.getElementById('ans')?.focus();
+  }
+  else if (act === 'cal-unknown') checkCal(true);
   else if (act === 'ro') { const l = document.getElementById('ro-line'); l.hidden = !l.hidden; if (!l.hidden && S.run) { S.run.roSeen = true; saveRun(); } }
   else if (act === 'next') next();
   else if (act === 'quit') {
