@@ -143,7 +143,7 @@ a { color: var(--der); }
 <div class="tip" id="tip" hidden></div>
 
 <script>
-const APP_VERSION = 'v5';
+const APP_VERSION = 'v6';
 const TABS = [
   { id: 'artikel', ico: 'der', name: 'Artikel', title: 'Genul substantivelor',
     desc: 'Exersezi <span class="art der">der</span> / <span class="art die">die</span> / <span class="art das">das</span> pe cuvintele tale din Duolingo, cu regulile de terminație (-ung, -chen, -keit…).' },
@@ -178,11 +178,20 @@ const dec = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g, 
 const cpath = p => p.split('/').map(encodeURIComponent).join('/');
 class GhError extends Error { constructor(status, msg) { super(msg); this.status = status; } }
 
+// Every request has a time limit: a request that never answers must become a visible error, not a silent wait.
+let STEP = '';
 async function gh(path, opts = {}) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 25000);
+  STEP = `${opts.method || 'GET'} ${path.split('?')[0]}`;
   try {
-    return await fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}${path}`, { cache: 'no-store', ...opts,
+    return await fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}${path}`, { cache: 'no-store', ...opts, signal: ctrl.signal,
       headers: { Authorization: `Bearer ${GH.token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(opts.headers || {}) } });
-  } catch (e) { throw new GhError(0, 'offline'); }
+  } catch (e) {
+    const err = new GhError(ctrl.signal.aborted ? 'timeout' : 0, ctrl.signal.aborted ? 'GitHub nu a răspuns în 25 de secunde' : `fără conexiune (${e?.message || e})`);
+    err.step = STEP;
+    throw err;
+  } finally { clearTimeout(timer); }
 }
 async function ghJson(path, opts) {
   const r = await gh(path, opts);
@@ -406,7 +415,7 @@ function viewLesson(t) {
   if (QUEUE.length) {
     const le = store.get('sdl-lasterr', null);
     h += `<section class="card"><p class="small">⏳ ${QUEUE.length === 1 ? 'O lecție terminată așteaptă' : QUEUE.length + ' lecții terminate așteaptă'} să fie trimisă.</p>
-      ${le ? `<p class="small muted">Ultima încercare (${esc(new Date(le.at).toLocaleTimeString('ro-RO'))}): ${le.status === 0 ? 'fără internet' : `eroare ${esc(le.status)} la <code>${esc(le.step)}</code> — ${esc(le.text)}`}</p>` : ''}
+      ${le ? `<p class="small muted">Ultima încercare (${esc(new Date(le.at).toLocaleTimeString('ro-RO'))}): eroare <b>${esc(le.status)}</b> la <code>${esc(le.step)}</code> — ${esc(le.text)}</p>` : ''}
       <button class="btn" data-act="flush">Trimite acum</button></section>`;
   }
   if (INSTALL) h += installCard();
@@ -563,7 +572,9 @@ document.addEventListener('click', async e => {
   } else if (act === 'sync') { S.msg = null; await refresh(); }
   else if (act === 'flush') {
     b.disabled = true; b.textContent = 'Trimit…';
-    try { await flushQueue(); await pullLessons(); S.connected = true; } catch (err) { /* reason stored in sdl-lasterr */ }
+    const tick = setInterval(() => { b.textContent = 'Trimit… ' + STEP; }, 500);
+    try { await flushQueue(); await pullLessons(); S.connected = true; S.msg = null; } catch (err) { /* reason stored in sdl-lasterr */ }
+    clearInterval(tick);
     render();
   }
   else if (act === 'install') {
